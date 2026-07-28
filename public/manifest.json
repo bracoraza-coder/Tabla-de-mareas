@@ -1,0 +1,22 @@
+{
+  "short_name": "Mareas Pro",
+  "name": "Tabla de Mareas Pro & Telemetría Marina",
+  "description": "Previsión de mareas, horas de pleamar y bajamar, viento, oleaje y solunar.",
+  "icons": [
+    {
+      "src": "/favicon.jpg",
+      "type": "image/jpeg",
+      "sizes": "512x512"
+    },
+    {
+      "src": "/apple-touch-icon.jpg",
+      "type": "image/jpeg",
+      "sizes": "180x180"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#020617",
+  "theme_color": "#0369a1",
+  "display": "standalone",
+  "orientation": "portrait"
+}

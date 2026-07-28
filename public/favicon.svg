@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="oceanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="50%" stop-color="#0369a1" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="waveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#4ade80" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="110" fill="url(#oceanGrad)" />
+  <!-- Outer Ring -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#0284c7" stroke-width="8" opacity="0.4" />
+  <!-- Compass Points -->
+  <path d="M 256 65 L 268 95 L 244 95 Z" fill="#38bdf8" />
+  <path d="M 256 447 L 268 417 L 244 417 Z" fill="#0284c7" />
+  <!-- Luminous Wave Graphic -->
+  <path d="M 90 280 C 140 220, 200 220, 256 280 C 312 340, 370 340, 422 280 L 422 340 C 370 400, 312 400, 256 340 C 200 280, 140 280, 90 340 Z" fill="url(#waveGrad)" />
+  <path d="M 90 230 C 140 170, 200 170, 256 230 C 312 290, 370 290, 422 230" fill="none" stroke="#22d3ee" stroke-width="12" stroke-linecap="round" />
+  <!-- Center Beacon Point -->
+  <circle cx="256" cy="230" r="14" fill="#4ade80" stroke="#ffffff" stroke-width="4" />
+</svg>
