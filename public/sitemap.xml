@@ -1,49 +1,49 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://mareaspro.app/</loc>
+    <loc>https://tabla-de-mareas.vercel.app/</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>hourly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://mareaspro.app/?puerto=cadiz</loc>
+    <loc>https://tabla-de-mareas.vercel.app/?puerto=cadiz</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://mareaspro.app/?puerto=huelva</loc>
+    <loc>https://tabla-de-mareas.vercel.app/?puerto=huelva</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://mareaspro.app/?puerto=vigo</loc>
+    <loc>https://tabla-de-mareas.vercel.app/?puerto=vigo</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://mareaspro.app/?puerto=santander</loc>
+    <loc>https://tabla-de-mareas.vercel.app/?puerto=santander</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://mareaspro.app/?puerto=malaga</loc>
+    <loc>https://tabla-de-mareas.vercel.app/?puerto=malaga</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://mareaspro.app/?puerto=barcelona</loc>
+    <loc>https://tabla-de-mareas.vercel.app/?puerto=barcelona</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://mareaspro.app/?puerto=las-palmas</loc>
+    <loc>https://tabla-de-mareas.vercel.app/?puerto=las-palmas</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
