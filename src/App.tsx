@@ -16,7 +16,7 @@ import { Footer } from './components/Footer';
 import { Port, TideDayData, UserUnits, NotificationSettings } from './types';
 import { PORTS_DATABASE } from './data/portsData';
 import { getTideDayData } from './utils/tideEngine';
-import { fetchLiveMarineWeather } from './utils/liveMarineFetcher';
+import { fetchLiveMarineWeather, getCachedMarineWeather } from './utils/liveMarineFetcher';
 import { checkAndTriggerTideAlerts } from './utils/notificationManager';
 
 export default function App() {
@@ -130,24 +130,63 @@ export default function App() {
   }, [notificationSettings, units]);
 
   // Recalculate tide day data when port or date changes, and fetch live marine telemetry
-  useEffect(() => {
-    let isMounted = true;
-    const data = getTideDayData(selectedPort, selectedDate, Date.now());
-    setDayData(data);
+  const [isWeatherUpdating, setIsWeatherUpdating] = useState(false);
 
-    fetchLiveMarineWeather(selectedPort, data.weather).then(result => {
-      if (isMounted && result.isLive) {
-        setDayData(prev => ({
-          ...prev,
-          weather: result.weather
-        }));
-      }
+  useEffect(() => {
+    const abortController = new AbortController();
+    const data = getTideDayData(selectedPort, selectedDate, Date.now());
+
+    // 1) Show cached live data instantly if we have it (no network wait, no flicker
+    //    back to the local harmonic fallback when revisiting a port).
+    const cached = getCachedMarineWeather(selectedPort.id);
+    setDayData(cached ? { ...data, weather: cached.weather } : data);
+
+    // 2) Revalidate in the background so the figures stay fresh, without blocking the UI.
+    setIsWeatherUpdating(true);
+    fetchLiveMarineWeather(selectedPort, data.weather, abortController.signal)
+      .then(result => {
+        if (abortController.signal.aborted) return;
+        if (result.isLive) {
+          setDayData(prev => ({ ...prev, weather: result.weather }));
+        }
+      })
+      .finally(() => {
+        if (!abortController.signal.aborted) setIsWeatherUpdating(false);
+      });
+
+    return () => {
+      abortController.abort();
+    };
+  }, [selectedPort, selectedDate]);
+
+  // Prefetch live weather for the user's favorite ports during idle time, so
+  // switching to any of them from the header feels instant (served from cache).
+  useEffect(() => {
+    if (favorites.length === 0) return;
+    const idleWindow = window as typeof window & {
+      requestIdleCallback?: (cb: () => void) => number;
+    };
+    const schedule = idleWindow.requestIdleCallback || ((cb: () => void) => window.setTimeout(cb, 800));
+
+    const handle = schedule(() => {
+      favorites.forEach((portId, idx) => {
+        const port = PORTS_DATABASE.find(p => p.id === portId);
+        if (!port || getCachedMarineWeather(port.id)) return;
+        // Stagger requests slightly to avoid bursting the free API all at once.
+        setTimeout(() => {
+          const seedData = getTideDayData(port, new Date(), Date.now());
+          fetchLiveMarineWeather(port, seedData.weather).catch(() => {});
+        }, idx * 400);
+      });
     });
 
     return () => {
-      isMounted = false;
+      if (idleWindow.requestIdleCallback && typeof handle === 'number') {
+        // cancelIdleCallback isn't consistently typed; guard defensively.
+        (window as any).cancelIdleCallback?.(handle);
+      }
     };
-  }, [selectedPort, selectedDate]);
+  }, [favorites]);
 
   // Auto-refresh live marine telemetry every 10 minutes so every visitor
   // always sees up-to-date, freely-sourced weather/wave data (Open-Meteo),
@@ -273,6 +312,7 @@ export default function App() {
         <MarineWeather
           weather={dayData.weather}
           units={units}
+          isUpdating={isWeatherUpdating}
         />
 
         {/* Marine & Fishing Technical Station Report */}

@@ -2,5 +2,5 @@
   "name": "Tabla de Mareas",
   "description": "Tabla de mareas interactiva, previsión meteorológica marina en tiempo real, gráfico solunar y datos astronómicos para puertos y costas.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }

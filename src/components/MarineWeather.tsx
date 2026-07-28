@@ -18,11 +18,13 @@ import { MarineWeather as MarineWeatherType, UserUnits } from '../types';
 interface MarineWeatherProps {
   weather: MarineWeatherType;
   units: UserUnits;
+  isUpdating?: boolean;
 }
 
 export const MarineWeather: React.FC<MarineWeatherProps> = ({
   weather,
   units,
+  isUpdating = false,
 }) => {
   // Convert speed
   const formatSpeed = (knots: number) => {
@@ -63,9 +65,9 @@ export const MarineWeather: React.FC<MarineWeatherProps> = ({
               <Wind className="w-5 h-5 text-cyan-400" />
               Meteorología Marina, Viento & Oleaje
             </h2>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-800/80 font-mono">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              EN VIVO • Open-Meteo API
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-800/80 font-mono transition-colors">
+              <span className={`w-2 h-2 rounded-full bg-emerald-400 ${isUpdating ? 'animate-ping' : 'animate-pulse'}`}></span>
+              {isUpdating ? 'ACTUALIZANDO…' : 'EN VIVO • Open-Meteo API'}
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
