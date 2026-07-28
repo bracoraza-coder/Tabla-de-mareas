@@ -69,6 +69,21 @@ export const TideChart: React.FC<TideChartProps> = ({
   // Chronologically sorted chart data
   const chartData = basePoints.sort((a, b) => a.timestamp - b.timestamp);
 
+  // Give the Y axis extra headroom above/below the real min/max so that the
+  // high/low tide time badges (which float above/below their dot) always
+  // have room to render fully inside the chart's drawing area, instead of
+  // being clipped by the SVG canvas edge when a peak sits right at the top
+  // or bottom of the curve.
+  const heightValues = chartData.map(d => d.height);
+  const dataMinHeight = heightValues.length ? Math.min(...heightValues) : 0;
+  const dataMaxHeight = heightValues.length ? Math.max(...heightValues) : 1;
+  const heightRange = dataMaxHeight - dataMinHeight || 1;
+  const yAxisPadding = Math.max(heightRange * 0.22, 0.35);
+  const yAxisDomain: [number, number] = [
+    Math.round((dataMinHeight - yAxisPadding) * 100) / 100,
+    Math.round((dataMaxHeight + yAxisPadding) * 100) / 100,
+  ];
+
   // Current time finding
   const now = new Date();
   const currentMinutesTotal = now.getHours() * 60 + now.getMinutes();
@@ -156,7 +171,7 @@ export const TideChart: React.FC<TideChartProps> = ({
       const labelText = `${arrowSymbol} ${payload.time}h (${formattedHeight})`;
 
       const textLen = labelText.length;
-      const badgeWidth = Math.max(76, textLen * 6.2 + 10);
+      const badgeWidth = Math.max(70, textLen * 5.7 + 8);
       const halfWidth = badgeWidth / 2;
 
       return (
@@ -286,7 +301,7 @@ export const TideChart: React.FC<TideChartProps> = ({
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={chartData}
-            margin={{ top: 20, right: 10, left: -20, bottom: 0 }}
+            margin={{ top: 40, right: 44, left: -2, bottom: 26 }}
           >
             <defs>
               <linearGradient id="tideGradient" x1="0" y1="0" x2="0" y2="1">
@@ -303,6 +318,7 @@ export const TideChart: React.FC<TideChartProps> = ({
               fontSize={11}
               tickLine={false}
               interval={3}
+              padding={{ left: 22, right: 22 }}
             />
 
             <YAxis
@@ -310,7 +326,7 @@ export const TideChart: React.FC<TideChartProps> = ({
               fontSize={11}
               tickLine={false}
               unit={` ${heightUnitLabel}`}
-              domain={['auto', 'auto']}
+              domain={yAxisDomain}
             />
 
             <Tooltip content={<CustomTooltip />} />
