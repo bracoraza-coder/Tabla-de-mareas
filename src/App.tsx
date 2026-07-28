@@ -149,6 +149,24 @@ export default function App() {
     };
   }, [selectedPort, selectedDate]);
 
+  // Auto-refresh live marine telemetry every 10 minutes so every visitor
+  // always sees up-to-date, freely-sourced weather/wave data (Open-Meteo),
+  // without needing to manually reload the page.
+  useEffect(() => {
+    const AUTO_REFRESH_MS = 10 * 60 * 1000;
+    const interval = setInterval(() => {
+      const now = new Date();
+      const freshData = getTideDayData(selectedPort, selectedDate, now.getTime());
+      fetchLiveMarineWeather(selectedPort, freshData.weather).then(result => {
+        setDayData(prev => ({
+          ...freshData,
+          weather: result.isLive ? result.weather : prev.weather,
+        }));
+      });
+    }, AUTO_REFRESH_MS);
+    return () => clearInterval(interval);
+  }, [selectedPort, selectedDate]);
+
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshToast, setRefreshToast] = useState<string | null>(null);
 

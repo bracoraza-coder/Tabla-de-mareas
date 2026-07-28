@@ -3,71 +3,61 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <!-- Primary SEO Meta Tags -->
-    <title>Tabla de Mareas Pro | Previsión de Mareas, Tiempo Marítimo y Solunar en Tiempo Real</title>
-    <meta name="title" content="Tabla de Mareas Pro | Previsión de Mareas, Tiempo Marítimo y Solunar en Tiempo Real" />
-    <meta name="description" content="Consulta las tablas de mareas oficiales, coeficientes de marea, horas exactas de pleamar y bajamar, temperatura del agua, viento, oleaje y tabla solunar para pesca y navegación en tiempo real." />
-    <meta name="keywords" content="tabla de mareas, mareas hoy, pleamar, bajamar, coeficiente de mareas, tiempo maritimo, prevision oleaje, temperatura del agua, tabla solunar pesca, viento mar, puertos de españa, navegacion" />
+
+    <!-- ===== SEO principal ===== -->
+    <title>Tabla de Mareas Pro | Mareas, Oleaje y Viento en Tiempo Real</title>
+    <meta name="description" content="Consulta la tabla de mareas de hoy: pleamar, bajamar, coeficiente, altura del agua, oleaje, viento y previsión marina en tiempo real. Datos gratuitos y actualizados para más de 100 puertos." />
+    <meta name="keywords" content="tabla de mareas, mareas hoy, pleamar, bajamar, coeficiente de mareas, previsión marina, oleaje, estado del mar, mareas pesca, calendario solunar" />
     <meta name="author" content="Tabla de Mareas Pro" />
-    <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#0369a1" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
     <link rel="canonical" href="https://tabla-de-mareas.vercel.app/" />
 
-    <!-- Favicon & Touch Icons -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 32x32 48x48 64x64" />
-    <link rel="icon" type="image/png" href="/icon-192.png" sizes="192x192" />
-    <link rel="icon" type="image/png" href="/favicon-512.png" sizes="512x512" />
+    <!-- ===== Favicons e iconos ===== -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#0284c7" />
 
-    <!-- Open Graph / Facebook / WhatsApp / Telegram -->
+    <!-- ===== Open Graph (Facebook, WhatsApp, LinkedIn...) ===== -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://tabla-de-mareas.vercel.app/" />
-    <meta property="og:title" content="Tabla de Mareas Pro | Previsión Náutica y Telemetría Marina" />
-    <meta property="og:description" content="Gráficas interactivas de mareas en tiempo real, horas de pleamar y bajamar con precisión de minuto, viento, oleaje y periodos solunares de pesca." />
+    <meta property="og:site_name" content="Tabla de Mareas Pro" />
+    <meta property="og:title" content="Tabla de Mareas Pro | Mareas, Oleaje y Viento en Tiempo Real" />
+    <meta property="og:description" content="Pleamar, bajamar, coeficiente de marea, oleaje y viento en tiempo real. Datos marinos gratuitos y siempre actualizados para tu puerto." />
     <meta property="og:image" content="https://tabla-de-mareas.vercel.app/og-image.png" />
-    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Tabla de Mareas Pro - Previsión de mareas y tiempo marítimo en tiempo real" />
     <meta property="og:locale" content="es_ES" />
-    <meta property="og:site_name" content="Tabla de Mareas Pro" />
+    <meta property="og:url" content="https://tabla-de-mareas.vercel.app/" />
 
-    <!-- Twitter Card Meta Tags -->
+    <!-- ===== Twitter / X Card ===== -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://tabla-de-mareas.vercel.app/" />
-    <meta name="twitter:title" content="Tabla de Mareas Pro | Previsión Náutica en Tiempo Real" />
-    <meta name="twitter:description" content="Tablas de mareas en vivo, coeficientes, pleamar, bajamar y tiempo marítimo para navegantes, pescadores y surfistas." />
+    <meta name="twitter:title" content="Tabla de Mareas Pro | Mareas, Oleaje y Viento en Tiempo Real" />
+    <meta name="twitter:description" content="Pleamar, bajamar, coeficiente de marea, oleaje y viento en tiempo real, con datos gratuitos y actualizados." />
     <meta name="twitter:image" content="https://tabla-de-mareas.vercel.app/og-image.png" />
 
-    <!-- Structured Data (JSON-LD) for Search Engines -->
+    <!-- ===== Datos estructurados (Schema.org) para resultados enriquecidos ===== -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      "name": "Tabla de Mareas Pro & Telemetría Marina",
-      "alternateName": "Mareas Pro",
+      "name": "Tabla de Mareas Pro",
       "url": "https://tabla-de-mareas.vercel.app/",
-      "description": "Aplicación profesional de consulta de mareas, meteorología marina, oleaje, viento y periodos solunares en tiempo real para puertos y costas.",
-      "applicationCategory": "WeatherApplication",
-      "operatingSystem": "All",
-      "inLanguage": "es",
+      "description": "Tabla de mareas interactiva, previsión meteorológica marina en tiempo real, gráfico solunar y datos astronómicos para puertos y costas.",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Any",
       "offers": {
         "@type": "Offer",
         "price": "0",
         "priceCurrency": "EUR"
       },
-      "author": {
-        "@type": "Organization",
-        "name": "Mareas Pro Network",
-        "url": "https://tabla-de-mareas.vercel.app/"
-      }
+      "inLanguage": "es"
     }
     </script>
 
-    <!-- Global Window Fetch Safe Prototype Override -->
     <script>
       (function() {
         try {
@@ -84,7 +74,7 @@
       })();
     </script>
   </head>
-  <body class="bg-slate-950 text-slate-100 antialiased selection:bg-cyan-500 selection:text-white">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

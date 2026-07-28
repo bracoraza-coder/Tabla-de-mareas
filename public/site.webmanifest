@@ -1,0 +1,24 @@
+{
+  "name": "Tabla de Mareas Pro & Telemetría Marina",
+  "short_name": "Tabla de Mareas",
+  "description": "Tabla de mareas en tiempo real, previsión meteorológica marina, gráfico solunar y datos astronómicos para puertos y costas de España e Iberoamérica.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#0284c7",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

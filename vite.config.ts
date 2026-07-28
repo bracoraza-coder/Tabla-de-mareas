@@ -5,6 +5,8 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    root: __dirname,
+    publicDir: 'public',
     plugins: [react(), tailwindcss()],
     optimizeDeps: {
       exclude: ['express', 'dotenv', '@google/genai']
@@ -13,6 +15,10 @@ export default defineConfig(() => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
+    },
+    build: {
+      outDir: 'dist',
+      emptyOutDir: true,
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
