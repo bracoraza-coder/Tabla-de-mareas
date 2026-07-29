@@ -1,10 +1,11 @@
 import { Port, HighLowTide, HourlyTidePoint, SolunarData, SolunarPeriod, MarineWeather, TideDayData, MonthlyTideRow, UserUnits } from '../types';
+import { getZonedFractionalHours, formatZonedHHMM, zonedTimeToUtc, getZonedParts } from './timezoneHelpers';
 
-// Helper for formatting time HH:mm
-export function formatTimeHHMM(date: Date): string {
-  const h = date.getHours().toString().padStart(2, '0');
-  const m = date.getMinutes().toString().padStart(2, '0');
-  return `${h}:${m}`;
+// Helper for formatting time HH:mm in the PORT'S OWN timezone (not the
+// visitor's browser timezone) - this is what makes tide times for e.g.
+// Tokyo show Tokyo's real local clock time to a visitor anywhere else.
+export function formatTimeHHMM(timestampMs: number, timeZone: string): string {
+  return formatZonedHHMM(timestampMs, timeZone);
 }
 
 // Calculate Moon Age (0 to 29.53 days)
@@ -65,9 +66,10 @@ export function calculateHarmonicTide(port: Port, timestampMs: number, moonAgeDa
   // Coeff factor (spring/neap amplification: range 0.55 to 1.30)
   const coeffFactor = 0.55 + (coeff / 100) * 0.75;
   
-  const d = new Date(timestampMs);
-  // Local fractional hours of the day (0.00 to 23.99)
-  const localHours = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
+  // Local fractional hours of the day at the PORT'S location (0.00 to 23.99),
+  // not the visitor's browser timezone - this is what keeps the tide curve
+  // correctly phased regardless of where the visitor is in the world.
+  const localHours = getZonedFractionalHours(timestampMs, port.timezone);
   
   // Base phase offset in hours (New Moon Pleamar time)
   const basePhase = port.phaseShiftHours < 1 ? 3.40 + port.phaseShiftHours * 2 : port.phaseShiftHours;
@@ -100,27 +102,28 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
   const year = targetDate.getFullYear();
   const month = targetDate.getMonth();
   const day = targetDate.getDate();
-  
-  const dayStart = new Date(year, month, day, 0, 0, 0, 0).getTime();
+
+  // Midnight of the selected calendar day IN THE PORT'S OWN TIMEZONE,
+  // expressed as a real UTC instant. This is what makes "today" for Tokyo
+  // mean Tokyo's actual today, regardless of the visitor's own clock.
+  const dayStart = zonedTimeToUtc(year, month + 1, day, 0, 0, 0, port.timezone);
   const moonAgeDays = getMoonAgeDays(targetDate);
   const coefficient = getTidalCoefficient(moonAgeDays);
   
   // Generate minute-by-minute or 15-min points for curve & high/low finding
   const hourlyPoints: HourlyTidePoint[] = [];
-  const finePoints: { timeMs: number; height: number; date: Date }[] = [];
+  const finePoints: { timeMs: number; height: number }[] = [];
   
   for (let mins = 0; mins <= 24 * 60; mins += 10) {
     const timeMs = dayStart + mins * 60 * 1000;
-    const d = new Date(timeMs);
     const height = calculateHarmonicTide(port, timeMs, moonAgeDays);
-    finePoints.push({ timeMs, height, date: d });
+    finePoints.push({ timeMs, height });
     
     if (mins % 30 === 0) {
-      const hh = d.getHours().toString().padStart(2, '0');
-      const mm = d.getMinutes().toString().padStart(2, '0');
+      const label = formatZonedHHMM(timeMs, port.timezone);
       hourlyPoints.push({
-        time: `${hh}:${mm}`,
-        timeLabel: `${hh}:${mm}`,
+        time: label,
+        timeLabel: label,
         height,
         timestamp: timeMs,
       });
@@ -138,7 +141,7 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
       // Local maximum -> Pleamar
       highLows.push({
         type: 'pleamar',
-        time: formatTimeHHMM(finePoints[i].date),
+        time: formatTimeHHMM(finePoints[i].timeMs, port.timezone),
         height: curr,
         timestamp: finePoints[i].timeMs,
       });
@@ -146,7 +149,7 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
       // Local minimum -> Bajamar
       highLows.push({
         type: 'bajamar',
-        time: formatTimeHHMM(finePoints[i].date),
+        time: formatTimeHHMM(finePoints[i].timeMs, port.timezone),
         height: curr,
         timestamp: finePoints[i].timeMs,
       });
@@ -165,12 +168,11 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
     ];
     let isHigh = true;
     times.forEach(tMs => {
-      const d = new Date(tMs);
-      if (d.getDate() === day) {
+      if (getZonedParts(tMs, port.timezone).day === day) {
         const h = calculateHarmonicTide(port, tMs, moonAgeDays);
         highLows.push({
           type: isHigh ? 'pleamar' : 'bajamar',
-          time: formatTimeHHMM(d),
+          time: formatTimeHHMM(tMs, port.timezone),
           height: h,
           timestamp: tMs,
         });
@@ -190,7 +192,8 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
   } else if (highLows.length > 0) {
     nextTide = highLows[highLows.length - 1];
   } else {
-    nextTide = { type: 'pleamar', time: '14:30', height: port.baseHeight + port.amplitude, timestamp: dayStart + 14.5 * 3600 * 1000 };
+    const fallbackMs = dayStart + 14.5 * 3600 * 1000;
+    nextTide = { type: 'pleamar', time: formatTimeHHMM(fallbackMs, port.timezone), height: port.baseHeight + port.amplitude, timestamp: fallbackMs };
   }
   
   // Time left string
@@ -220,7 +223,10 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
   const weather = generateMarineWeather(port, targetDate);
 
   const daysArr = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  const dateStr = targetDate.toISOString().split('T')[0];
+  // Built directly from the selected Y/M/D (not toISOString(), which converts
+  // to UTC and could silently shift to the previous/next day depending on
+  // the visitor's own timezone offset).
+  const dateStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
 
   return {
     dateStr,

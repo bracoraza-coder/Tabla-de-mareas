@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { Waves, Clock, ArrowUpRight, ArrowDownRight, Radio } from 'lucide-react';
 import { TideDayData, Port, UserUnits } from '../types';
+import { getZonedFractionalHours, formatZonedHHMM, getUtcOffsetLabel, getZoneAbbreviation } from '../utils/timezoneHelpers';
 
 interface TideChartProps {
   dayData: TideDayData;
@@ -84,9 +85,13 @@ export const TideChart: React.FC<TideChartProps> = ({
     Math.round((dataMaxHeight + yAxisPadding) * 100) / 100,
   ];
 
-  // Current time finding
+  // Current time finding - using the PORT'S own local time, not the
+  // visitor's browser clock, so the "AHORA" marker lands on the right
+  // point of the curve regardless of where in the world the visitor is.
   const now = new Date();
-  const currentMinutesTotal = now.getHours() * 60 + now.getMinutes();
+  const nowMs = now.getTime();
+  const portFractionalHours = getZonedFractionalHours(nowMs, port.timezone);
+  const currentMinutesTotal = portFractionalHours * 60;
 
   const currentPoint = chartData.length > 0
     ? chartData.reduce((prev, curr) => {
@@ -107,7 +112,7 @@ export const TideChart: React.FC<TideChartProps> = ({
 
     // 1. Live Current Position (Green pulsing dot with time badge)
     if (isLiveNow) {
-      const nowTimeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const nowTimeStr = formatZonedHHMM(nowMs, port.timezone);
       return (
         <g key={`live-dot-${payload.time}`}>
           <circle
@@ -263,7 +268,7 @@ export const TideChart: React.FC<TideChartProps> = ({
             </div>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            Curva hidrométrica armónica continua con indicador temporal en vivo (punto verde parpadeante)
+            Curva hidrométrica armónica continua con indicador temporal en vivo (punto verde parpadeante) · Todas las horas en <strong className="text-slate-300">hora local de {port.name.split(' (')[0]}</strong> ({getZoneAbbreviation(Date.now(), port.timezone)}, {getUtcOffsetLabel(Date.now(), port.timezone)})
           </p>
         </div>
 

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Port, TideDayData, UserUnits } from '../types';
 import { generateStationReport } from '../utils/stationReportEngine';
+import { formatZonedHHMM } from '../utils/timezoneHelpers';
 
 interface StationReportProps {
   port: Port;
@@ -32,7 +33,7 @@ export const AiAssistant: React.FC<StationReportProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'pesca' | 'navegacion' | 'origen'>('pesca');
   const [userQuery, setUserQuery] = useState<string>('');
-  const [lastRefreshed, setLastRefreshed] = useState<string>(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  const [lastRefreshed, setLastRefreshed] = useState<string>(formatZonedHHMM(Date.now(), port.timezone));
 
   const report = generateStationReport(port, dayData, units, userQuery);
 
@@ -44,7 +45,7 @@ export const AiAssistant: React.FC<StationReportProps> = ({
   ];
 
   const handleRefresh = () => {
-    setLastRefreshed(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    setLastRefreshed(formatZonedHHMM(Date.now(), port.timezone));
   };
 
   const handleQuestionSubmit = (e: React.FormEvent) => {

@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { Port, UserUnits, NotificationSettings } from '../types';
 import { PORTS_DATABASE } from '../data/portsData';
+import { buildPortPath } from '../utils/router';
+import { getZonedParts } from '../utils/timezoneHelpers';
 
 interface HeaderProps {
   selectedPort: Port;
@@ -76,8 +78,10 @@ export const Header: React.FC<HeaderProps> = ({
 
   const isFav = favorites.includes(selectedPort.id);
 
-  // Format date string for input
-  const dateInputVal = selectedDate.toISOString().split('T')[0];
+  // Format date string for input - built directly from local Y/M/D digits,
+  // not toISOString() (which converts to UTC and can silently roll over to
+  // the previous/next day depending on the visitor's own timezone offset).
+  const dateInputVal = `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getDate().toString().padStart(2, '0')}`;
 
   const handleGPSLocation = () => {
     if ('geolocation' in navigator) {
@@ -205,9 +209,11 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 ) : (
                   filteredPorts.map((port) => (
-                    <button
+                    <a
                       key={port.id}
-                      onClick={() => {
+                      href={buildPortPath(port)}
+                      onClick={(e) => {
+                        e.preventDefault();
                         onSelectPort(port);
                         setIsSearchOpen(false);
                         setSearchQuery('');
@@ -231,7 +237,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-800">
                         {port.amplitude}m
                       </span>
-                    </button>
+                    </a>
                   ))
                 )}
               </div>
@@ -255,7 +261,10 @@ export const Header: React.FC<HeaderProps> = ({
                 id="date-picker-input"
               />
               <button
-                onClick={() => onSelectDate(new Date())}
+                onClick={() => {
+                  const todayInPort = getZonedParts(Date.now(), selectedPort.timezone);
+                  onSelectDate(new Date(todayInPort.year, todayInPort.month - 1, todayInPort.day, 12, 0, 0));
+                }}
                 className="text-xs bg-blue-950 text-blue-300 hover:bg-blue-900 border border-blue-800 px-2 py-0.5 rounded-md transition-colors cursor-pointer font-bold"
                 id="today-date-btn"
               >
@@ -423,9 +432,13 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="text-slate-500 font-bold text-[10px] uppercase tracking-wider whitespace-nowrap hidden lg:inline">Populares:</span>
             <div className="hidden sm:flex items-center gap-1.5 overflow-x-auto no-scrollbar">
               {popularPorts.slice(0, 5).map(p => (
-                <button
+                <a
                   key={p.id}
-                  onClick={() => onSelectPort(p)}
+                  href={buildPortPath(p)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onSelectPort(p);
+                  }}
                   className={`px-2.5 py-1 rounded text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
                     selectedPort.id === p.id
                       ? 'bg-blue-600 text-white font-bold'
@@ -434,7 +447,7 @@ export const Header: React.FC<HeaderProps> = ({
                   id={`popular-pill-${p.id}`}
                 >
                   {p.name.split(' (')[0]}
-                </button>
+                </a>
               ))}
             </div>
           </div>
@@ -446,9 +459,13 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-amber-300 font-bold text-[11px] uppercase">Favoritos:</span>
               <div className="flex items-center gap-1 overflow-x-auto max-w-xs no-scrollbar">
                 {favoritePortsList.map(fav => (
-                  <button
+                  <a
                     key={fav.id}
-                    onClick={() => onSelectPort(fav)}
+                    href={buildPortPath(fav)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onSelectPort(fav);
+                    }}
                     className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer border ${
                       selectedPort.id === fav.id
                         ? 'bg-amber-400 text-slate-950 font-bold border-amber-300'
@@ -457,7 +474,7 @@ export const Header: React.FC<HeaderProps> = ({
                     id={`fav-pill-${fav.id}`}
                   >
                     {fav.name.split(' (')[0]}
-                  </button>
+                  </a>
                 ))}
               </div>
             </div>

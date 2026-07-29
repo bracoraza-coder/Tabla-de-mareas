@@ -1,6 +1,7 @@
 import { Port, NotificationSettings, ScheduledAlert, UserUnits } from '../types';
 import { PORTS_DATABASE } from '../data/portsData';
 import { getTideDayData, formatHeight } from './tideEngine';
+import { formatZonedHHMM } from './timezoneHelpers';
 
 export function getNotificationPermission(): NotificationPermission | 'unsupported' {
   if (typeof window === 'undefined' || !('Notification' in window)) {
@@ -84,7 +85,7 @@ export function getScheduledAlertsForToday(
       const tideTime = new Date(hl.timestamp);
       const alertTime = new Date(tideTime.getTime() - settings.alertTimingMinutes * 60 * 1000);
 
-      const alertTimeStr = alertTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const alertTimeStr = formatZonedHHMM(alertTime.getTime(), port.timezone);
 
       alerts.push({
         id: `${port.id}_${hl.type}_${hl.time}`,

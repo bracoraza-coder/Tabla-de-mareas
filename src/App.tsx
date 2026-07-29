@@ -18,10 +18,40 @@ import { PORTS_DATABASE } from './data/portsData';
 import { getTideDayData } from './utils/tideEngine';
 import { fetchLiveMarineWeather, getCachedMarineWeather } from './utils/liveMarineFetcher';
 import { checkAndTriggerTideAlerts } from './utils/notificationManager';
+import { getPortFromLocation, syncUrlToPort, updateHeadForPort } from './utils/router';
+import { formatZonedHHMM } from './utils/timezoneHelpers';
 
 export default function App() {
-  // Active Port
-  const [selectedPort, setSelectedPort] = useState<Port>(PORTS_DATABASE[0]); // Default Cádiz
+  // Active Port - initialised from the URL (e.g. /mareas/cadiz) when present,
+  // so every port has its own shareable, indexable address.
+  const [selectedPort, setSelectedPortState] = useState<Port>(
+    () => getPortFromLocation() || PORTS_DATABASE[0]
+  );
+
+  // Central port selector: updates state, the browser URL and the page's
+  // SEO tags (title/description/canonical/OG) all in one place, so every
+  // entry point (search, favorites, GPS, map modal, notifications) stays
+  // in sync automatically.
+  const selectPort = (port: Port, replaceHistory = false) => {
+    setSelectedPortState(port);
+    syncUrlToPort(port, replaceHistory);
+    updateHeadForPort(port);
+  };
+
+  // Set the correct URL/SEO tags for the initial port on first load, and
+  // keep everything in sync with the browser's Back/Forward buttons.
+  useEffect(() => {
+    syncUrlToPort(selectedPort, true);
+    updateHeadForPort(selectedPort);
+
+    const handlePopState = () => {
+      const portFromUrl = getPortFromLocation();
+      if (portFromUrl) setSelectedPortState(portFromUrl);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   // Selected Date
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -120,7 +150,7 @@ export default function App() {
         notificationSettings.subscribedPortIds,
         notificationSettings,
         units,
-        setSelectedPort
+        selectPort
       );
     };
 
@@ -223,8 +253,8 @@ export default function App() {
       }));
     }
     
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    setRefreshToast(`Telemetría en tiempo real (Open-Meteo) actualizada a las ${timeStr}`);
+    const timeStr = formatZonedHHMM(now.getTime(), selectedPort.timezone);
+    setRefreshToast(`Telemetría en tiempo real (Open-Meteo) actualizada a las ${timeStr}h (hora local de ${selectedPort.name.split(' (')[0]})`);
     
     setTimeout(() => {
       setIsRefreshing(false);
@@ -271,7 +301,7 @@ export default function App() {
       {/* Header Navigation */}
       <Header
         selectedPort={selectedPort}
-        onSelectPort={setSelectedPort}
+        onSelectPort={selectPort}
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
         favorites={favorites}
@@ -337,7 +367,7 @@ export default function App() {
         isOpen={isMapModalOpen}
         onClose={() => setIsMapModalOpen(false)}
         selectedPort={selectedPort}
-        onSelectPort={setSelectedPort}
+        onSelectPort={selectPort}
       />
 
       {/* Browser Tide Notification Settings Modal */}
@@ -348,7 +378,7 @@ export default function App() {
         settings={notificationSettings}
         onUpdateSettings={setNotificationSettings}
         selectedPort={selectedPort}
-        onSelectPort={setSelectedPort}
+        onSelectPort={selectPort}
         units={units}
       />
 
@@ -363,7 +393,7 @@ export default function App() {
       <CookieBanner onOpenLegal={handleOpenLegal} />
 
       {/* Footer */}
-      <Footer onSelectPort={setSelectedPort} onOpenLegal={handleOpenLegal} />
+      <Footer onSelectPort={selectPort} onOpenLegal={handleOpenLegal} />
 
     </div>
   );

@@ -12,6 +12,7 @@ import {
   Anchor
 } from 'lucide-react';
 import { TideDayData, Port, UserUnits } from '../types';
+import { formatZonedHHMM, getZoneAbbreviation } from '../utils/timezoneHelpers';
 
 interface CurrentTideGaugeProps {
   dayData: TideDayData;
@@ -90,10 +91,19 @@ export const CurrentTideGauge: React.FC<CurrentTideGaugeProps> = ({
                 Nivel de Agua en Tiempo Real
               </span>
             </div>
-            <span className="text-xs text-blue-300 font-bold flex items-center gap-1 bg-blue-950/90 px-3 py-1 rounded-md border border-blue-800">
-              <Anchor className="w-3.5 h-3.5 text-blue-400" />
-              {port.name.split(' (')[0]}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-blue-300 font-bold flex items-center gap-1 bg-blue-950/90 px-3 py-1 rounded-md border border-blue-800">
+                <Anchor className="w-3.5 h-3.5 text-blue-400" />
+                {port.name.split(' (')[0]}
+              </span>
+              <span
+                className="text-xs text-cyan-300 font-bold font-mono flex items-center gap-1 bg-cyan-950/70 px-3 py-1 rounded-md border border-cyan-800"
+                title={`Hora local de ${port.name.split(' (')[0]} (${port.timezone})`}
+              >
+                <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                {formatZonedHHMM(Date.now(), port.timezone)} {getZoneAbbreviation(Date.now(), port.timezone)}
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center my-2">
@@ -101,7 +111,7 @@ export const CurrentTideGauge: React.FC<CurrentTideGaugeProps> = ({
             {/* Height Display */}
             <div className="md:col-span-7 flex flex-col">
               <div className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">
-                Altura Actual ({new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                Altura Actual ({formatZonedHHMM(Date.now(), port.timezone)} hora local)
               </div>
               
               <div className="flex items-baseline gap-2">

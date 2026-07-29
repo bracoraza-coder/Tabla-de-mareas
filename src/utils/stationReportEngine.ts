@@ -1,5 +1,6 @@
 import { Port, TideDayData, UserUnits } from '../types';
 import { formatHeight, formatWindSpeed, formatTemp } from './tideEngine';
+import { formatZonedHHMM } from './timezoneHelpers';
 
 export interface StationAnalysis {
   stationInfo: {
@@ -180,7 +181,7 @@ export function generateStationReport(
       coordinates,
       sensorNetwork,
       tideModel,
-      lastUpdate: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      lastUpdate: `${formatZonedHHMM(Date.now(), port.timezone)}h (hora local)`,
     },
     summary,
     fishingDiagnosis: {

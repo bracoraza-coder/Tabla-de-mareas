@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Map, MapPin, X, Globe, Search, Anchor, Compass } from 'lucide-react';
 import { Port } from '../types';
 import { PORTS_DATABASE } from '../data/portsData';
+import { buildPortPath } from '../utils/router';
 
 interface PortMapModalProps {
   isOpen: boolean;
@@ -94,9 +95,11 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
           {filteredPorts.map((port) => {
             const isSelected = selectedPort.id === port.id;
             return (
-              <button
+              <a
                 key={port.id}
-                onClick={() => {
+                href={buildPortPath(port)}
+                onClick={(e) => {
+                  e.preventDefault();
                   onSelectPort(port);
                   onClose();
                 }}
@@ -129,7 +132,7 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
                   <span>Coord: {port.lat.toFixed(2)}°, {port.lng.toFixed(2)}°</span>
                   <span className="text-blue-300 font-bold">Marea: {port.amplitude}m</span>
                 </div>
-              </button>
+              </a>
             );
           })}
         </div>

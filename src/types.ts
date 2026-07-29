@@ -3,6 +3,7 @@ export interface Port {
   name: string;
   region: string;
   country: string;
+  timezone: string; // IANA timezone, e.g. "Europe/Madrid", "Asia/Tokyo"
   lat: number;
   lng: number;
   baseHeight: number; // mean sea level in meters
