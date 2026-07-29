@@ -165,7 +165,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                   3. Fuentes de Datos Abiertas y Licencias MetOD
                 </h3>
                 <p>
-                  Los datos meteorológicos, de viento y oleaje son obtenidos en tiempo real a través de las APIs abiertas de <strong>Open-Meteo Weather & Marine API</strong> bajo licencia <strong className="text-cyan-400">CC BY 4.0</strong>. Las tablas de mareas utilizan componentes armónicos astronómicos ajustados con datos públicos de referencia costera internacional (IHO / Puertos de España / NOAA).
+                  Los datos meteorológicos, de viento y oleaje son obtenidos en tiempo real a través de las APIs abiertas de <strong>Open-Meteo Weather & Marine API</strong> bajo licencia <strong className="text-cyan-400">CC BY 4.0</strong>. Las tablas de mareas se calculan con un modelo astronómico propio de componentes armónicos (M2, S2, N2), calibrado y verificado progresivamente puerto a puerto contra los horarios publicados por el <strong>Instituto Hidrográfico de la Marina (IHM)</strong>, autoridad oficial española en predicción de mareas. Es un modelo de aproximación, no una redistribución directa de datos oficiales: para navegación o cualquier uso donde la precisión sea crítica, verifica siempre los horarios en la <a href="https://armada.defensa.gob.es/ihm" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline">web oficial del IHM</a>.
                 </p>
               </div>
             </div>

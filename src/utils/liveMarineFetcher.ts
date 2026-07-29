@@ -98,7 +98,7 @@ export async function fetchLiveMarineWeather(port: Port, fallback: MarineWeather
         { signal: controller1.signal }
       ).catch(() => null).finally(() => clearTimeout(timeout1)),
       fetch(
-        `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&current=wave_height,wave_direction,wave_period,ocean_current_velocity,ocean_current_direction&timezone=auto`,
+        `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&current=wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period,ocean_current_velocity,ocean_current_direction&timezone=auto`,
         { signal: controller2.signal }
       ).catch(() => null).finally(() => clearTimeout(timeout2))
     ]);
@@ -149,6 +149,22 @@ export async function fetchLiveMarineWeather(port: Port, fallback: MarineWeather
 
     const seaStateName = waveHeightToSeaState(waveHeightMeters);
 
+    // Primary groundswell (the surfable component, separate from local
+    // wind-driven chop) - Open-Meteo's marine model partitions this out
+    // directly, which is exactly what surf forecasters use.
+    const swellHeightMeters = typeof currentM.swell_wave_height === 'number'
+      ? Math.round(currentM.swell_wave_height * 10) / 10
+      : Math.round(waveHeightMeters * 0.85 * 10) / 10;
+
+    const swellPeriodSeconds = typeof currentM.swell_wave_period === 'number'
+      ? Math.round(currentM.swell_wave_period)
+      : Math.max(wavePeriodSeconds, 9);
+
+    const swellDeg = typeof currentM.swell_wave_direction === 'number'
+      ? currentM.swell_wave_direction
+      : waveDeg;
+    const swellDirection = degreesToCardinal(swellDeg);
+
     const liveWeather: MarineWeather = {
       temp,
       feelsLike,
@@ -164,7 +180,12 @@ export async function fetchLiveMarineWeather(port: Port, fallback: MarineWeather
       waveHeightMeters,
       wavePeriodSeconds,
       waveDirection,
+      waveDegrees: waveDeg,
       seaStateName,
+      swellHeightMeters,
+      swellPeriodSeconds,
+      swellDirection,
+      swellDegrees: swellDeg,
       waterTemp: port.waterTempAvg,
       pressureHpa,
       pressureTrend: 'estable',

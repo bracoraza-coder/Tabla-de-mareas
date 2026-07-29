@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { Header } from './components/Header';
+import { QuickNav } from './components/QuickNav';
 import { CurrentTideGauge } from './components/CurrentTideGauge';
 import { TideChart } from './components/TideChart';
+import { SurfSection } from './components/SurfSection';
 import { SolunarSection } from './components/SolunarSection';
 import { MarineWeather } from './components/MarineWeather';
 import { MonthlyTable } from './components/MonthlyTable';
@@ -315,15 +317,21 @@ export default function App() {
         isRefreshing={isRefreshing}
       />
 
+      {/* Quick-jump navigation: lets any visitor go straight to the section
+          they care about the moment the page opens */}
+      <QuickNav />
+
       {/* Main Container Content */}
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6 flex-1 w-full">
         
         {/* Real-time Water Height Live Gauge & Next Tide Countdown */}
-        <CurrentTideGauge
-          dayData={dayData}
-          port={selectedPort}
-          units={units}
-        />
+        <div id="current-tide-gauge" className="scroll-mt-24">
+          <CurrentTideGauge
+            dayData={dayData}
+            port={selectedPort}
+            units={units}
+          />
+        </div>
 
         {/* Interactive Tide Curve Recharts Graph */}
         <TideChart
@@ -332,18 +340,30 @@ export default function App() {
           units={units}
         />
 
-        {/* Solunar Calendar & Fishing Activity Index */}
-        <SolunarSection
-          solunar={dayData.solunar}
-          dateStr={dayData.dateStr}
+        {/* Surf & Wave Forecast - flagship section for surfers */}
+        <SurfSection
+          weather={dayData.weather}
+          dayData={dayData}
+          port={selectedPort}
+          units={units}
         />
 
+        {/* Solunar Calendar & Fishing Activity Index */}
+        <div id="solunar-section" className="scroll-mt-24">
+          <SolunarSection
+            solunar={dayData.solunar}
+            dateStr={dayData.dateStr}
+          />
+        </div>
+
         {/* Real-time Marine Weather, Wind Compass & Swell */}
-        <MarineWeather
-          weather={dayData.weather}
-          units={units}
-          isUpdating={isWeatherUpdating}
-        />
+        <div id="weather-section" className="scroll-mt-24">
+          <MarineWeather
+            weather={dayData.weather}
+            units={units}
+            isUpdating={isWeatherUpdating}
+          />
+        </div>
 
         {/* Marine & Fishing Technical Station Report */}
         <AiAssistant
@@ -353,12 +373,14 @@ export default function App() {
         />
 
         {/* Monthly Tide Calendar Table */}
-        <MonthlyTable
-          port={selectedPort}
-          units={units}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-        />
+        <div id="monthly-table-section" className="scroll-mt-24">
+          <MonthlyTable
+            port={selectedPort}
+            units={units}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+          />
+        </div>
 
       </main>
 

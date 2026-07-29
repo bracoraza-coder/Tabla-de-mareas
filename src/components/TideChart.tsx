@@ -270,6 +270,21 @@ export const TideChart: React.FC<TideChartProps> = ({
           <p className="text-xs text-slate-400 mt-0.5">
             Curva hidrométrica armónica continua con indicador temporal en vivo (punto verde parpadeante) · Todas las horas en <strong className="text-slate-300">hora local de {port.name.split(' (')[0]}</strong> ({getZoneAbbreviation(Date.now(), port.timezone)}, {getUtcOffsetLabel(Date.now(), port.timezone)})
           </p>
+          <p className="text-[11px] text-amber-400/90 mt-1 flex items-center gap-1">
+            <span>⚠</span>
+            <span>
+              Modelo astronómico de aproximación, no oficial. Verifica siempre los horarios en la{' '}
+              <a
+                href="https://armada.defensa.gob.es/ihm"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline text-amber-300 hover:text-amber-200"
+              >
+                web oficial del Instituto Hidrográfico de la Marina
+              </a>
+              {' '}antes de cualquier actividad donde la precisión sea crítica.
+            </span>
+          </p>
         </div>
 
         {/* Range Controls & Legend */}

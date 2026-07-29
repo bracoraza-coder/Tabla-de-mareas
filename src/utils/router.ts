@@ -48,8 +48,8 @@ export function updateHeadForPort(port: Port) {
   const path = buildPortPath(port);
   const url = `${origin}${path}`;
 
-  const title = `Mareas en ${port.name} Hoy | Tabla de Mareas Pro`;
-  const description = `Tabla de mareas de ${port.name} (${port.region}) en tiempo real: hora de pleamar y bajamar, coeficiente, altura del agua, oleaje y viento. Datos gratuitos, siempre actualizados.`;
+  const title = `Mareas y Surf en ${port.name} Hoy | Previsión de Olas | Tabla de Mareas Pro`;
+  const description = `Tabla de mareas de ${port.name} (${port.region}) en tiempo real: pleamar, bajamar, coeficiente y altura del agua. Previsión de surf y oleaje: swell, periodo, viento y mejor hora para surfear. Datos gratuitos, siempre actualizados.`;
 
   document.title = title;
 

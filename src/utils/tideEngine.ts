@@ -94,7 +94,16 @@ export function calculateHarmonicTide(port: Port, timestampMs: number, moonAgeDa
   const tideVariation = (m2Component + s2Component + n2Component) * coeffFactor;
   const currentHeight = port.baseHeight + tideVariation;
   
-  return Math.max(0.05, Math.round(currentHeight * 100) / 100);
+  // IMPORTANT: do not round here. Rounding to the nearest centimetre before
+  // this value is used for high/low detection created quantisation noise -
+  // tiny plateaus that got misread as extra false tide events, especially
+  // in low-amplitude ports (typically Mediterranean, with well under 1m of
+  // real tidal range). Rounding now happens only at display time.
+  return Math.max(0.05, currentHeight);
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
 }
 
 // Generate Full Day Tide Data
@@ -124,14 +133,14 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
       hourlyPoints.push({
         time: label,
         timeLabel: label,
-        height,
+        height: round2(height),
         timestamp: timeMs,
       });
     }
   }
   
   // Find local minima & maxima for Pleamares & Bajamares
-  const highLows: HighLowTide[] = [];
+  const rawExtrema: HighLowTide[] = [];
   for (let i = 1; i < finePoints.length - 1; i++) {
     const prev = finePoints[i - 1].height;
     const curr = finePoints[i].height;
@@ -139,21 +148,46 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
     
     if (curr > prev && curr >= next) {
       // Local maximum -> Pleamar
-      highLows.push({
+      rawExtrema.push({
         type: 'pleamar',
         time: formatTimeHHMM(finePoints[i].timeMs, port.timezone),
-        height: curr,
+        height: round2(curr),
         timestamp: finePoints[i].timeMs,
       });
     } else if (curr < prev && curr <= next) {
       // Local minimum -> Bajamar
-      highLows.push({
+      rawExtrema.push({
         type: 'bajamar',
         time: formatTimeHHMM(finePoints[i].timeMs, port.timezone),
-        height: curr,
+        height: round2(curr),
         timestamp: finePoints[i].timeMs,
       });
     }
+  }
+
+  // Guard against spurious extrema: in low-amplitude ports (typically
+  // Mediterranean, where the real tidal range can be just a few tens of
+  // centimetres) the interference between the M2/S2/N2 constituents can
+  // create tiny secondary wiggles that aren't real, separate tide events.
+  // Two genuine high/low tides are never less than ~3h apart in practice,
+  // so we collapse anything closer than that down to its most extreme point.
+  const MIN_GAP_MS = 3 * 3600 * 1000;
+  const highLows: HighLowTide[] = [];
+  for (const point of rawExtrema) {
+    const last = highLows[highLows.length - 1];
+    if (last && (point.timestamp - last.timestamp) < MIN_GAP_MS) {
+      // Too close to the previous kept point - keep whichever is more extreme.
+      const shouldReplace = point.type === 'pleamar'
+        ? point.height > last.height
+        : point.height < last.height;
+      if (shouldReplace && point.type === last.type) {
+        highLows[highLows.length - 1] = point;
+      }
+      // If the type differs but the gap is unrealistically small, skip the
+      // newer one entirely rather than reporting a physically implausible flip.
+      continue;
+    }
+    highLows.push(point);
   }
   
   // If edge didn't catch 4 tides, ensure clean 2 pleamares + 2 bajamares sequence
@@ -173,7 +207,7 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
         highLows.push({
           type: isHigh ? 'pleamar' : 'bajamar',
           time: formatTimeHHMM(tMs, port.timezone),
-          height: h,
+          height: round2(h),
           timestamp: tMs,
         });
       }
@@ -182,7 +216,7 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
   }
   
   // Instant Current Water Height
-  const currentWaterHeight = calculateHarmonicTide(port, nowTimestamp, moonAgeDays);
+  const currentWaterHeight = round2(calculateHarmonicTide(port, nowTimestamp, moonAgeDays));
   
   // Next Tide & State
   const futureTides = highLows.filter(hl => hl.timestamp > nowTimestamp);
@@ -372,6 +406,15 @@ export function generateMarineWeather(port: Port, date: Date): MarineWeather {
   const conditions = ['Despejado', 'Soleado con brisa', 'Parcialmente nublado', 'Nubes y claros', 'Ligeros chubascos marinos'];
   const condIdx = Math.floor(pseudoRand(5) * conditions.length);
 
+  // Primary groundswell: usually a bit longer-period and slightly rotated
+  // from the local wind-driven wave, which is a realistic approximation
+  // when no live swell partition data is available.
+  const waveDeg = windDeg;
+  const swellDegOffset = (pseudoRand(12) - 0.5) * 40;
+  const swellDeg = Math.round((waveDeg + swellDegOffset + 360) % 360);
+  const swellHeight = Math.round((waveHeight * (0.75 + pseudoRand(13) * 0.35)) * 10) / 10;
+  const swellPeriod = Math.round(9 + pseudoRand(14) * 6);
+
   return {
     temp,
     feelsLike,
@@ -387,7 +430,12 @@ export function generateMarineWeather(port: Port, date: Date): MarineWeather {
     waveHeightMeters: waveHeight,
     wavePeriodSeconds: Math.round(7 + pseudoRand(6) * 5),
     waveDirection: directions[(dirIdx + 1) % directions.length],
+    waveDegrees: waveDeg,
     seaStateName: seaState,
+    swellHeightMeters: swellHeight,
+    swellPeriodSeconds: swellPeriod,
+    swellDirection: directions[Math.round(swellDeg / 22.5) % 16],
+    swellDegrees: swellDeg,
     waterTemp: port.waterTempAvg,
     pressureHpa: Math.round(1012 + pseudoRand(7) * 12),
     pressureTrend: pseudoRand(8) > 0.6 ? 'ascenso' : (pseudoRand(8) < 0.3 ? 'descenso' : 'estable'),

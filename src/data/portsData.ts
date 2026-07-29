@@ -143,7 +143,7 @@ export const PORTS_DATABASE: Port[] = [
     lng: -6.283,
     baseHeight: 1.85,
     amplitude: 1.45,
-    phaseShiftHours: 0.20,
+    phaseShiftHours: 0.615, // recalibrated & verified against real tide times (Jul 2026)
     waterTempAvg: 19.5,
     isPopular: true,
   },

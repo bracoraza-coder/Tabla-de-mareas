@@ -69,7 +69,13 @@ export interface MarineWeather {
   waveHeightMeters: number;
   wavePeriodSeconds: number;
   waveDirection: string;
+  waveDegrees: number;
   seaStateName: string; // "Mar Calma", "Marejadilla", "Marejada", "Fuerte Marejada"
+  // Primary groundswell (the surfable component, separate from local wind chop)
+  swellHeightMeters: number;
+  swellPeriodSeconds: number;
+  swellDirection: string;
+  swellDegrees: number;
   waterTemp: number; // °C
   pressureHpa: number;
   pressureTrend: 'ascenso' | 'descenso' | 'estable';
