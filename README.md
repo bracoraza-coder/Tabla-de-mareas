@@ -1,43 +1,49 @@
-# Tabla de Mareas
+# Tabla de Mareas Pro
 
-Web estática para consultar horarios de pleamar y bajamar, gráfico diario y calendario mensual por puerto.
+Web estática (React + Vite + TypeScript) para consultar previsión de mareas, oleaje y surf en puertos de España. Sin servidor propio, sin claves de API, sin servicios de IA de pago.
 
 ## Tecnologías
 
-- React + TypeScript + Vite
-- Diseño responsive con Tailwind CSS
+- React 19 + TypeScript + Vite 6
+- Tailwind CSS
+- Recharts (gráfico de mareas)
 - Despliegue estático en Vercel
 
-No requiere cuentas de usuarios, servidor propio, claves de API ni servicios de IA.
+## Fuentes de datos
 
-## Ejecutar en tu ordenador
+- **Mareas**: modelo astronómico armónico propio (M2/S2/N2), verificado progresivamente contra los horarios publicados por el Instituto Hidrográfico de la Marina (IHM). **No es una redistribución de datos oficiales** — es una estimación. Para navegación o cualquier uso donde la precisión sea crítica, consulta siempre la fuente oficial: https://armada.defensa.gob.es/ihm
+- **Meteorología y oleaje**: [Open-Meteo](https://open-meteo.com) (API abierta, gratuita, sin necesidad de clave, licencia CC BY 4.0).
+- **Solunar**: salida/puesta de sol calculadas con fórmula astronómica real (NOAA) para la latitud/longitud exacta de cada puerto; fases lunares con la teoría solunar de J. A. Knight.
 
-Necesitas tener instalado Node.js.
+## Ejecutar en local
+
+Requiere Node.js instalado.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Abre la dirección que muestre la terminal, normalmente `http://localhost:5173`.
+Abre la URL que indique la terminal (normalmente `http://localhost:5173`).
 
-## Publicar con GitHub y Vercel
-
-1. Sube este proyecto a un repositorio de GitHub.
-2. En Vercel, selecciona **Add New → Project** e importa el repositorio.
-3. Vercel detectará Vite automáticamente.
-4. Pulsa **Deploy**.
-
-Cada cambio que subas a la rama principal de GitHub generará un nuevo despliegue en Vercel.
-
-## Comprobaciones antes de publicar
+## Compilar para producción
 
 ```bash
 npm run build
 ```
 
-Vercel ejecuta esa misma compilación durante el despliegue.
+Genera la carpeta `dist/`. Vercel ejecuta este mismo comando en cada despliegue.
 
-## Nota sobre los datos
+## Publicar en GitHub + Vercel
 
-La aplicación actual muestra una predicción orientativa. Antes de presentar mareas como oficiales se integrarán fuentes españolas autorizadas y se indicará siempre la fuente y la hora de actualización.
+1. Sube este proyecto a un repositorio de GitHub.
+2. En Vercel: **Add New → Project** → importa el repositorio.
+3. Vercel detecta Vite automáticamente (configuración ya incluida en `vercel.json`).
+4. Pulsa **Deploy**.
+
+Cada push a la rama principal genera un nuevo despliegue automático.
+
+## Notas
+
+- No se necesita ninguna variable de entorno ni clave de API para que la web funcione.
+- No hay analítica ni cookies de terceros: solo `localStorage` en el propio navegador del usuario (favoritos, unidades, avisos).
