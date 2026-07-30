@@ -7,7 +7,6 @@ import { TideChart } from './components/TideChart';
 import { SolunarSection } from './components/SolunarSection';
 import { MarineWeather } from './components/MarineWeather';
 import { MonthlyTable } from './components/MonthlyTable';
-import { AiAssistant } from './components/AiAssistant';
 import { PortMapModal } from './components/PortMapModal';
 import { NotificationModal } from './components/NotificationModal';
 import { LegalModal, LegalTab } from './components/LegalModal';
@@ -322,12 +321,7 @@ function Dashboard() {
           units={units}
         />
 
-        {/* Marine & Fishing Technical Station Report */}
-        <AiAssistant
-          port={selectedPort}
-          dayData={dayData}
-          units={units}
-        />
+
 
         {/* Monthly Tide Calendar Table */}
         <MonthlyTable
