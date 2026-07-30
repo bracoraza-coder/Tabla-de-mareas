@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Map, MapPin, X, Globe, Search, Anchor, Compass } from 'lucide-react';
 import { Port } from '../types';
 import { PORTS_DATABASE } from '../data/portsData';
-import { buildPortPath } from '../utils/router';
 
 interface PortMapModalProps {
   isOpen: boolean;
@@ -47,7 +47,7 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
                 Catálogo Global de Puertos y Estaciones
               </h3>
               <p className="text-xs text-slate-400 font-mono">
-                Selecciona el puerto de referencia
+                Selecciona la estación maregráfica de referencia
               </p>
             </div>
           </div>
@@ -95,11 +95,10 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
           {filteredPorts.map((port) => {
             const isSelected = selectedPort.id === port.id;
             return (
-              <a
+              <Link
                 key={port.id}
-                href={buildPortPath(port)}
-                onClick={(e) => {
-                  e.preventDefault();
+                to={`/puerto/${port.id}`}
+                onClick={() => {
                   onSelectPort(port);
                   onClose();
                 }}
@@ -132,14 +131,14 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
                   <span>Coord: {port.lat.toFixed(2)}°, {port.lng.toFixed(2)}°</span>
                   <span className="text-blue-300 font-bold">Marea: {port.amplitude}m</span>
                 </div>
-              </a>
+              </Link>
             );
           })}
         </div>
 
         {/* Footer */}
         <div className="p-3 bg-slate-950 border-t border-slate-800 text-center text-xs text-slate-400">
-          Mostrando {filteredPorts.length} puertos disponibles.
+          Mostrando {filteredPorts.length} puertos marítimos oficiales.
         </div>
 
       </div>

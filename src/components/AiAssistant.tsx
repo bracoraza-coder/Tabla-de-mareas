@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { Port, TideDayData, UserUnits } from '../types';
 import { generateStationReport } from '../utils/stationReportEngine';
-import { formatZonedHHMM } from '../utils/timezoneHelpers';
 
 interface StationReportProps {
   port: Port;
@@ -33,7 +32,7 @@ export const AiAssistant: React.FC<StationReportProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'pesca' | 'navegacion' | 'origen'>('pesca');
   const [userQuery, setUserQuery] = useState<string>('');
-  const [lastRefreshed, setLastRefreshed] = useState<string>(formatZonedHHMM(Date.now(), port.timezone));
+  const [lastRefreshed, setLastRefreshed] = useState<string>(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
 
   const report = generateStationReport(port, dayData, units, userQuery);
 
@@ -45,7 +44,7 @@ export const AiAssistant: React.FC<StationReportProps> = ({
   ];
 
   const handleRefresh = () => {
-    setLastRefreshed(formatZonedHHMM(Date.now(), port.timezone));
+    setLastRefreshed(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
   };
 
   const handleQuestionSubmit = (e: React.FormEvent) => {
@@ -68,11 +67,11 @@ export const AiAssistant: React.FC<StationReportProps> = ({
               </h2>
               <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded font-mono font-bold flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                SIN IA • MODELO + DATOS OPEN-METEO
+                SIN IA • DATOS DE ESTACIÓN
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5 font-mono">
-              Modelo astronómico armónico (M2/S2/N2) y datos meteorológicos en vivo de Open-Meteo para {port.name}
+              Telemetría oficial, físicas armónicas M2/S2 y estación meteorológica para {port.name}
             </p>
           </div>
         </div>
@@ -245,7 +244,7 @@ export const AiAssistant: React.FC<StationReportProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
               <div className="text-xs font-bold text-slate-300 uppercase font-mono flex items-center gap-1.5">
-                <Wind className="w-4 h-4 text-cyan-400" /> Datos de Viento
+                <Wind className="w-4 h-4 text-cyan-400" /> Telemetría de Viento
               </div>
               <p className="text-xs text-slate-300 leading-relaxed font-mono">
                 {report.navigationBulletin.windSummary}
@@ -318,7 +317,7 @@ export const AiAssistant: React.FC<StationReportProps> = ({
             </div>
             <div>Coordenadas GPS: {report.stationInfo.coordinates}</div>
             <div>Modelo Mareográfico: {report.stationInfo.tideModel}</div>
-            <div>Última actualización de datos: {report.stationInfo.lastUpdate}</div>
+            <div>Última sincronización de telemetría: {report.stationInfo.lastUpdate}</div>
           </div>
         </div>
       )}

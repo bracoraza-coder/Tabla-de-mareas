@@ -12,20 +12,17 @@ import {
   Anchor
 } from 'lucide-react';
 import { TideDayData, Port, UserUnits } from '../types';
-import { formatZonedHHMM, getZoneAbbreviation } from '../utils/timezoneHelpers';
 
 interface CurrentTideGaugeProps {
   dayData: TideDayData;
   port: Port;
   units: UserUnits;
-  isViewingToday: boolean;
 }
 
 export const CurrentTideGauge: React.FC<CurrentTideGaugeProps> = ({
   dayData,
   port,
   units,
-  isViewingToday,
 }) => {
   const {
     currentWaterHeight,
@@ -85,36 +82,18 @@ export const CurrentTideGauge: React.FC<CurrentTideGaugeProps> = ({
           
           <div className="flex items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2">
-              {isViewingToday ? (
-                <>
-                  <span className="flex h-2.5 w-2.5 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                  </span>
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono">
-                    Nivel de Agua Ahora (Modelo)
-                  </span>
-                </>
-              ) : (
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-300 font-mono flex items-center gap-1.5">
-                  <Info className="w-3.5 h-3.5" />
-                  Previsión para el {dayData.dateStr} (no es hoy)
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-blue-300 font-bold flex items-center gap-1 bg-blue-950/90 px-3 py-1 rounded-md border border-blue-800">
-                <Anchor className="w-3.5 h-3.5 text-blue-400" />
-                {port.name.split(' (')[0]}
+              <span className="flex h-2.5 w-2.5 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
               </span>
-              <span
-                className="text-xs text-cyan-300 font-bold font-mono flex items-center gap-1 bg-cyan-950/70 px-3 py-1 rounded-md border border-cyan-800"
-                title={`Hora local de ${port.name.split(' (')[0]} (${port.timezone})`}
-              >
-                <Clock className="w-3.5 h-3.5 text-cyan-400" />
-                {formatZonedHHMM(Date.now(), port.timezone)} {getZoneAbbreviation(Date.now(), port.timezone)}
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono">
+                Nivel de Agua en Tiempo Real
               </span>
             </div>
+            <span className="text-xs text-blue-300 font-bold flex items-center gap-1 bg-blue-950/90 px-3 py-1 rounded-md border border-blue-800">
+              <Anchor className="w-3.5 h-3.5 text-blue-400" />
+              {port.name.split(' (')[0]}
+            </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center my-2">
@@ -122,9 +101,7 @@ export const CurrentTideGauge: React.FC<CurrentTideGaugeProps> = ({
             {/* Height Display */}
             <div className="md:col-span-7 flex flex-col">
               <div className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">
-                {isViewingToday
-                  ? `Altura Actual (${formatZonedHHMM(Date.now(), port.timezone)} hora local)`
-                  : 'Altura Estimada a Mediodía (este día)'}
+                Altura Actual ({new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
               </div>
               
               <div className="flex items-baseline gap-2">
@@ -187,29 +164,22 @@ export const CurrentTideGauge: React.FC<CurrentTideGaugeProps> = ({
 
           </div>
 
-          {/* Next Tide Countdown Banner - only meaningful for today */}
-          {isViewingToday ? (
-            <div className="mt-4 pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-blue-400" />
-                <span className="text-slate-300">
-                  Próxima <strong className="text-white uppercase font-bold">{nextTide.type}</strong>:
-                </span>
-                <span className="font-bold text-blue-300 text-sm font-mono">{nextTide.time} h</span>
-                <span className="text-slate-400 font-mono">({formatHeight(nextTide.height)})</span>
-              </div>
+          {/* Next Tide Countdown Banner */}
+          <div className="mt-4 pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-blue-400" />
+              <span className="text-slate-300">
+                Próxima <strong className="text-white uppercase font-bold">{nextTide.type}</strong>:
+              </span>
+              <span className="font-bold text-blue-300 text-sm font-mono">{nextTide.time} h</span>
+              <span className="text-slate-400 font-mono">({formatHeight(nextTide.height)})</span>
+            </div>
 
-              <div className="bg-blue-950 text-blue-200 border border-blue-800 px-3 py-1 rounded-md font-bold text-xs flex items-center gap-1.5 font-mono">
-                <span>TIEMPO RESTANTE:</span>
-                <span className="text-white">{nextTideTimeLeftStr}</span>
-              </div>
+            <div className="bg-blue-950 text-blue-200 border border-blue-800 px-3 py-1 rounded-md font-bold text-xs flex items-center gap-1.5 font-mono">
+              <span>TIEMPO RESTANTE:</span>
+              <span className="text-white">{nextTideTimeLeftStr}</span>
             </div>
-          ) : (
-            <div className="mt-4 pt-3 border-t border-slate-800 text-xs text-slate-400 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80 flex items-center gap-2">
-              <Info className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Consulta las 4 pleamares/bajamares de este día en la lista de la derecha. La cuenta atrás y la altura en vivo solo se muestran cuando ves el día de hoy.</span>
-            </div>
-          )}
+          </div>
 
         </div>
 
@@ -243,7 +213,7 @@ export const CurrentTideGauge: React.FC<CurrentTideGaugeProps> = ({
           {/* Today's Pleamares & Bajamares Summary */}
           <div className="bg-slate-950 border border-slate-800 border-l-4 border-l-emerald-500 rounded-xl p-4 flex-1">
             <div className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-3 flex items-center justify-between border-b border-slate-800 pb-2">
-              <span>Ciclo de Mareas {isViewingToday ? 'Hoy' : 'de Este Día'}</span>
+              <span>Ciclo de Mareas Hoy</span>
               <span className="text-slate-400 text-[11px] font-mono">{dayData.dateStr}</span>
             </div>
 

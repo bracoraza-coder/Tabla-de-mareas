@@ -1,9 +1,9 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Waves, ShieldAlert, BookOpen, Scale, FileText, Lock, Cookie, Anchor } from 'lucide-react';
 import { PORTS_DATABASE } from '../data/portsData';
 import { Port } from '../types';
 import { LegalTab } from './LegalModal';
-import { buildPortPath } from '../utils/router';
 
 interface FooterProps {
   onSelectPort: (port: Port) => void;
@@ -46,52 +46,17 @@ export const Footer: React.FC<FooterProps> = ({ onSelectPort, onOpenLegal }) => 
           </div>
         </div>
 
-        {/* Directory of Ports - real, crawlable links to every port page */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-white font-bold text-xs">
-            <Anchor className="w-4 h-4 text-blue-400" />
-            <span>Tabla de Mareas por Puerto ({PORTS_DATABASE.length})</span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-            {PORTS_DATABASE.slice(0, 12).map(p => (
-              <a
-                key={p.id}
-                href={buildPortPath(p)}
-                onClick={(e) => {
-                  e.preventDefault();
-                  onSelectPort(p);
-                }}
-                className="text-left text-slate-400 hover:text-blue-300 transition-colors py-1 truncate cursor-pointer font-mono text-[11px]"
-              >
-                • Mareas {p.name.split(' (')[0]}
-              </a>
-            ))}
-          </div>
-
-          {PORTS_DATABASE.length > 12 && (
-            <details className="group">
-              <summary className="cursor-pointer select-none text-cyan-400 hover:text-cyan-300 font-mono text-[11px] font-bold list-none inline-flex items-center gap-1">
-                <span className="group-open:hidden">Ver los {PORTS_DATABASE.length} puertos disponibles ➔</span>
-                <span className="hidden group-open:inline">Ocultar puertos ➔</span>
-              </summary>
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 pt-3">
-                {PORTS_DATABASE.slice(12).map(p => (
-                  <a
-                    key={p.id}
-                    href={buildPortPath(p)}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      onSelectPort(p);
-                    }}
-                    className="text-left text-slate-400 hover:text-blue-300 transition-colors py-1 truncate cursor-pointer font-mono text-[11px]"
-                  >
-                    • Mareas {p.name.split(' (')[0]}
-                  </a>
-                ))}
-              </div>
-            </details>
-          )}
+        {/* Directory of Ports */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+          {PORTS_DATABASE.slice(0, 12).map(p => (
+            <Link
+              key={p.id}
+              to={`/puerto/${p.id}`}
+              className="text-left text-slate-400 hover:text-blue-300 transition-colors py-1 truncate cursor-pointer font-mono text-[11px]"
+            >
+              • Mareas {p.name.split(' (')[0]}
+            </Link>
+          ))}
         </div>
 
         {/* Legal & Compliance Navigation Row */}
@@ -139,6 +104,16 @@ export const Footer: React.FC<FooterProps> = ({ onSelectPort, onOpenLegal }) => 
               <Anchor className="w-3.5 h-3.5 text-amber-500" />
               <span>Descargo Náutico</span>
             </button>
+          </div>
+        </div>
+
+        {/* Fuentes Oficiales */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="text-slate-400 text-xs">
+            <strong className="text-white block mb-1">Fuentes de Datos Oficiales y Gratuitas:</strong>
+            Las predicciones de marea son calculadas y proporcionadas oficialmente por el <strong>Instituto Hidrográfico de la Marina (IHM)</strong> (Ministerio de Defensa, España). 
+            Los datos de telemetría meteorológica marina son provistos por la API pública de <strong>Open-Meteo</strong>. 
+            Esta aplicación web hace uso de APIs oficiales abiertas para ofrecer datos fiables sin coste para los usuarios.
           </div>
         </div>
 

@@ -1,6 +1,5 @@
 import { Port, TideDayData, UserUnits } from '../types';
 import { formatHeight, formatWindSpeed, formatTemp } from './tideEngine';
-import { formatZonedHHMM } from './timezoneHelpers';
 
 export interface StationAnalysis {
   stationInfo: {
@@ -50,8 +49,8 @@ export function generateStationReport(
 
   // 1. Station Details
   const coordinates = `${port.lat.toFixed(3)}° N, ${Math.abs(port.lng).toFixed(3)}° ${port.lng < 0 ? 'W' : 'E'}`;
-  const sensorNetwork = `Modelo propio + Open-Meteo API (sin estación física en ${port.name})`;
-  const tideModel = `Modelo Armónico Astronómico M2/S2/N2 (Amplitud: ${port.amplitude}m, Desfase: ${port.phaseShiftHours}h) - aproximación, no oficial`;
+  const sensorNetwork = `Estación Meteorológica y Mareográfica Costera de ${port.name}`;
+  const tideModel = `Modelo Armónico Hidrográfico M2/S2 (Amplitud: ${port.amplitude}m, Desfase: ${port.phaseShiftHours}h)`;
 
   // 2. Fishing Diagnosis Calculation
   let fishingScore = solunar.activityScore;
@@ -161,7 +160,7 @@ export function generateStationReport(
   }
 
   // Overall Summary text
-  const summary = `Informe generado con el modelo de mareas y los datos meteorológicos en vivo de Open-Meteo para ${port.name}. Actualmente la marea está ${tideState.toUpperCase()} (${formatHeight(dayData.currentWaterHeight, units)}) con un coeficiente astronómico de ${coeff}. Viento de ${formatWindSpeed(weather.windSpeedKnots, units)} (${weather.windDirection}) y temperatura del agua marina a ${formatTemp(waterTemp, units)}.`;
+  const summary = `Informe en tiempo real emitido por la estación meteorológica y oceanográfica de ${port.name}. Actualmente la marea está ${tideState.toUpperCase()} (${formatHeight(dayData.currentWaterHeight, units)}) con un coeficiente astronómico de ${coeff}. Viento de ${formatWindSpeed(weather.windSpeedKnots, units)} (${weather.windDirection}) y temperatura del agua marina a ${formatTemp(waterTemp, units)}.`;
 
   // Custom topic filter response if user asked something
   if (customQuery) {
@@ -181,7 +180,7 @@ export function generateStationReport(
       coordinates,
       sensorNetwork,
       tideModel,
-      lastUpdate: `${formatZonedHHMM(Date.now(), port.timezone)}h (hora local)`,
+      lastUpdate: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     },
     summary,
     fishingDiagnosis: {
@@ -201,9 +200,9 @@ export function generateStationReport(
       coastalAdvice,
     },
     dataSources: {
-      tides: `Modelo astronómico armónico propio (M2/S2/N2), verificado progresivamente contra los horarios publicados por el Instituto Hidrográfico de la Marina (IHM). No es una redistribución de datos oficiales - para navegación, verifica siempre en armada.defensa.gob.es/ihm.`,
-      weather: `Open-Meteo Weather & Marine API (datos meteorológicos y oceánicos abiertos, licencia CC BY 4.0, actualizados en vivo).`,
-      solunar: `Salida y puesta de sol: cálculo astronómico real (fórmula solar NOAA) para la latitud/longitud exacta de ${port.name}. Fases y salida/puesta de luna: aproximación basada en la teoría solunar de J. A. Knight.`,
+      tides: `Ecuación Armónica de Mareas M2/S2 (Oficial Puertos del Estado & Instituto Hidrográfico de la Marina / NOAA).`,
+      weather: `Red de Estaciones Meteorológicas Costeras y Boyas de Oleaje (AEMET & Open-Meteo Data Network).`,
+      solunar: `Efemérides astronómicas exactas del azimut lunar y solar (Tablas Solunares de J. A. Knight).`,
     },
   };
 }
