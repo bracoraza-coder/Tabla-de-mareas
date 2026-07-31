@@ -1,5 +1,41 @@
 import { Port, MarineWeather } from '../types';
 
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes: matches Open-Meteo's own update cadence
+const CACHE_PREFIX = 'tdm_marine_cache_';
+
+interface CacheEntry {
+  weather: MarineWeather;
+  source: string;
+  fetchedAt: number;
+}
+
+function readCache(portId: string): CacheEntry | null {
+  try {
+    const raw = sessionStorage.getItem(CACHE_PREFIX + portId);
+    if (!raw) return null;
+    const entry: CacheEntry = JSON.parse(raw);
+    if (Date.now() - entry.fetchedAt > CACHE_TTL_MS) return null;
+    return entry;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(portId: string, entry: CacheEntry) {
+  try {
+    sessionStorage.setItem(CACHE_PREFIX + portId, JSON.stringify(entry));
+  } catch {
+    // Ignore quota/availability errors (private browsing, etc.)
+  }
+}
+
+/** Instantly returns a cached reading for a port, if fresh enough, without any network call. */
+export function getCachedMarineWeather(portId: string): { weather: MarineWeather; source: string } | null {
+  const entry = readCache(portId);
+  if (!entry) return null;
+  return { weather: entry.weather, source: entry.source };
+}
+
 function degreesToCardinal(deg: number): string {
   const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO'];
   const index = Math.round(deg / 22.5) % 16;
@@ -36,7 +72,7 @@ function parseWmoWeatherCode(code: number): { condition: string; conditionCode: 
   return { condition: 'Nubes y Claros', conditionCode: 'cloud-sun' };
 }
 
-export async function fetchLiveMarineWeather(port: Port, fallback: MarineWeather): Promise<{
+export async function fetchLiveMarineWeather(port: Port, fallback: MarineWeather, externalSignal?: AbortSignal): Promise<{
   weather: MarineWeather;
   isLive: boolean;
   source: string;
@@ -50,6 +86,11 @@ export async function fetchLiveMarineWeather(port: Port, fallback: MarineWeather
     const controller2 = new AbortController();
     const timeout2 = setTimeout(() => controller2.abort(), 4000);
 
+    externalSignal?.addEventListener('abort', () => {
+      controller1.abort();
+      controller2.abort();
+    });
+
     // Fetch Open-Meteo Weather Forecast & Marine APIs in parallel
     const [weatherRes, marineRes] = await Promise.all([
       fetch(
@@ -57,7 +98,7 @@ export async function fetchLiveMarineWeather(port: Port, fallback: MarineWeather
         { signal: controller1.signal }
       ).catch(() => null).finally(() => clearTimeout(timeout1)),
       fetch(
-        `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&current=wave_height,wave_direction,wave_period,ocean_current_velocity,ocean_current_direction&timezone=auto`,
+        `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&current=wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period,ocean_current_velocity,ocean_current_direction&timezone=auto`,
         { signal: controller2.signal }
       ).catch(() => null).finally(() => clearTimeout(timeout2))
     ]);
@@ -108,6 +149,22 @@ export async function fetchLiveMarineWeather(port: Port, fallback: MarineWeather
 
     const seaStateName = waveHeightToSeaState(waveHeightMeters);
 
+    // Primary groundswell (the surfable component, separate from local
+    // wind-driven chop) - Open-Meteo's marine model partitions this out
+    // directly, which is exactly what surf forecasters use.
+    const swellHeightMeters = typeof currentM.swell_wave_height === 'number'
+      ? Math.round(currentM.swell_wave_height * 10) / 10
+      : Math.round(waveHeightMeters * 0.85 * 10) / 10;
+
+    const swellPeriodSeconds = typeof currentM.swell_wave_period === 'number'
+      ? Math.round(currentM.swell_wave_period)
+      : Math.max(wavePeriodSeconds, 9);
+
+    const swellDeg = typeof currentM.swell_wave_direction === 'number'
+      ? currentM.swell_wave_direction
+      : waveDeg;
+    const swellDirection = degreesToCardinal(swellDeg);
+
     const liveWeather: MarineWeather = {
       temp,
       feelsLike,
@@ -123,7 +180,12 @@ export async function fetchLiveMarineWeather(port: Port, fallback: MarineWeather
       waveHeightMeters,
       wavePeriodSeconds,
       waveDirection,
+      waveDegrees: waveDeg,
       seaStateName,
+      swellHeightMeters,
+      swellPeriodSeconds,
+      swellDirection,
+      swellDegrees: swellDeg,
       waterTemp: port.waterTempAvg,
       pressureHpa,
       pressureTrend: 'estable',
@@ -132,10 +194,13 @@ export async function fetchLiveMarineWeather(port: Port, fallback: MarineWeather
       visibilityKm: fallback.visibilityKm,
     };
 
+    const liveSource = 'Open-Meteo Marine API & Sistema Hidrográfico Real';
+    writeCache(port.id, { weather: liveWeather, source: liveSource, fetchedAt: Date.now() });
+
     return {
       weather: liveWeather,
       isLive: true,
-      source: 'Open-Meteo Marine API & Sistema Hidrográfico Real'
+      source: liveSource
     };
   } catch {
     return { weather: fallback, isLive: false, source: 'Modelo Hidrográfico Armónico Local' };

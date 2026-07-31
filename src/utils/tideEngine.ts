@@ -1,10 +1,11 @@
 import { Port, HighLowTide, HourlyTidePoint, SolunarData, SolunarPeriod, MarineWeather, TideDayData, MonthlyTideRow, UserUnits } from '../types';
+import { getZonedFractionalHours, formatZonedHHMM, zonedTimeToUtc, getZonedParts } from './timezoneHelpers';
 
-// Helper for formatting time HH:mm
-export function formatTimeHHMM(date: Date): string {
-  const h = date.getHours().toString().padStart(2, '0');
-  const m = date.getMinutes().toString().padStart(2, '0');
-  return `${h}:${m}`;
+// Helper for formatting time HH:mm in the PORT'S OWN timezone (not the
+// visitor's browser timezone) - this is what makes tide times for e.g.
+// Tokyo show Tokyo's real local clock time to a visitor anywhere else.
+export function formatTimeHHMM(timestampMs: number, timeZone: string): string {
+  return formatZonedHHMM(timestampMs, timeZone);
 }
 
 // Calculate Moon Age (0 to 29.53 days)
@@ -65,9 +66,10 @@ export function calculateHarmonicTide(port: Port, timestampMs: number, moonAgeDa
   // Coeff factor (spring/neap amplification: range 0.55 to 1.30)
   const coeffFactor = 0.55 + (coeff / 100) * 0.75;
   
-  const d = new Date(timestampMs);
-  // Local fractional hours of the day (0.00 to 23.99)
-  const localHours = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
+  // Local fractional hours of the day at the PORT'S location (0.00 to 23.99),
+  // not the visitor's browser timezone - this is what keeps the tide curve
+  // correctly phased regardless of where the visitor is in the world.
+  const localHours = getZonedFractionalHours(timestampMs, port.timezone);
   
   // Base phase offset in hours (New Moon Pleamar time)
   const basePhase = port.phaseShiftHours < 1 ? 3.40 + port.phaseShiftHours * 2 : port.phaseShiftHours;
@@ -92,7 +94,16 @@ export function calculateHarmonicTide(port: Port, timestampMs: number, moonAgeDa
   const tideVariation = (m2Component + s2Component + n2Component) * coeffFactor;
   const currentHeight = port.baseHeight + tideVariation;
   
-  return Math.max(0.05, Math.round(currentHeight * 100) / 100);
+  // IMPORTANT: do not round here. Rounding to the nearest centimetre before
+  // this value is used for high/low detection created quantisation noise -
+  // tiny plateaus that got misread as extra false tide events, especially
+  // in low-amplitude ports (typically Mediterranean, with well under 1m of
+  // real tidal range). Rounding now happens only at display time.
+  return Math.max(0.05, currentHeight);
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
 }
 
 // Generate Full Day Tide Data
@@ -100,35 +111,36 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
   const year = targetDate.getFullYear();
   const month = targetDate.getMonth();
   const day = targetDate.getDate();
-  
-  const dayStart = new Date(year, month, day, 0, 0, 0, 0).getTime();
+
+  // Midnight of the selected calendar day IN THE PORT'S OWN TIMEZONE,
+  // expressed as a real UTC instant. This is what makes "today" for Tokyo
+  // mean Tokyo's actual today, regardless of the visitor's own clock.
+  const dayStart = zonedTimeToUtc(year, month + 1, day, 0, 0, 0, port.timezone);
   const moonAgeDays = getMoonAgeDays(targetDate);
   const coefficient = getTidalCoefficient(moonAgeDays);
   
   // Generate minute-by-minute or 15-min points for curve & high/low finding
   const hourlyPoints: HourlyTidePoint[] = [];
-  const finePoints: { timeMs: number; height: number; date: Date }[] = [];
+  const finePoints: { timeMs: number; height: number }[] = [];
   
   for (let mins = 0; mins <= 24 * 60; mins += 10) {
     const timeMs = dayStart + mins * 60 * 1000;
-    const d = new Date(timeMs);
     const height = calculateHarmonicTide(port, timeMs, moonAgeDays);
-    finePoints.push({ timeMs, height, date: d });
+    finePoints.push({ timeMs, height });
     
     if (mins % 30 === 0) {
-      const hh = d.getHours().toString().padStart(2, '0');
-      const mm = d.getMinutes().toString().padStart(2, '0');
+      const label = formatZonedHHMM(timeMs, port.timezone);
       hourlyPoints.push({
-        time: `${hh}:${mm}`,
-        timeLabel: `${hh}:${mm}`,
-        height,
+        time: label,
+        timeLabel: label,
+        height: round2(height),
         timestamp: timeMs,
       });
     }
   }
   
   // Find local minima & maxima for Pleamares & Bajamares
-  const highLows: HighLowTide[] = [];
+  const rawExtrema: HighLowTide[] = [];
   for (let i = 1; i < finePoints.length - 1; i++) {
     const prev = finePoints[i - 1].height;
     const curr = finePoints[i].height;
@@ -136,21 +148,46 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
     
     if (curr > prev && curr >= next) {
       // Local maximum -> Pleamar
-      highLows.push({
+      rawExtrema.push({
         type: 'pleamar',
-        time: formatTimeHHMM(finePoints[i].date),
-        height: curr,
+        time: formatTimeHHMM(finePoints[i].timeMs, port.timezone),
+        height: round2(curr),
         timestamp: finePoints[i].timeMs,
       });
     } else if (curr < prev && curr <= next) {
       // Local minimum -> Bajamar
-      highLows.push({
+      rawExtrema.push({
         type: 'bajamar',
-        time: formatTimeHHMM(finePoints[i].date),
-        height: curr,
+        time: formatTimeHHMM(finePoints[i].timeMs, port.timezone),
+        height: round2(curr),
         timestamp: finePoints[i].timeMs,
       });
     }
+  }
+
+  // Guard against spurious extrema: in low-amplitude ports (typically
+  // Mediterranean, where the real tidal range can be just a few tens of
+  // centimetres) the interference between the M2/S2/N2 constituents can
+  // create tiny secondary wiggles that aren't real, separate tide events.
+  // Two genuine high/low tides are never less than ~3h apart in practice,
+  // so we collapse anything closer than that down to its most extreme point.
+  const MIN_GAP_MS = 3 * 3600 * 1000;
+  const highLows: HighLowTide[] = [];
+  for (const point of rawExtrema) {
+    const last = highLows[highLows.length - 1];
+    if (last && (point.timestamp - last.timestamp) < MIN_GAP_MS) {
+      // Too close to the previous kept point - keep whichever is more extreme.
+      const shouldReplace = point.type === 'pleamar'
+        ? point.height > last.height
+        : point.height < last.height;
+      if (shouldReplace && point.type === last.type) {
+        highLows[highLows.length - 1] = point;
+      }
+      // If the type differs but the gap is unrealistically small, skip the
+      // newer one entirely rather than reporting a physically implausible flip.
+      continue;
+    }
+    highLows.push(point);
   }
   
   // If edge didn't catch 4 tides, ensure clean 2 pleamares + 2 bajamares sequence
@@ -165,13 +202,12 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
     ];
     let isHigh = true;
     times.forEach(tMs => {
-      const d = new Date(tMs);
-      if (d.getDate() === day) {
+      if (getZonedParts(tMs, port.timezone).day === day) {
         const h = calculateHarmonicTide(port, tMs, moonAgeDays);
         highLows.push({
           type: isHigh ? 'pleamar' : 'bajamar',
-          time: formatTimeHHMM(d),
-          height: h,
+          time: formatTimeHHMM(tMs, port.timezone),
+          height: round2(h),
           timestamp: tMs,
         });
       }
@@ -180,7 +216,7 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
   }
   
   // Instant Current Water Height
-  const currentWaterHeight = calculateHarmonicTide(port, nowTimestamp, moonAgeDays);
+  const currentWaterHeight = round2(calculateHarmonicTide(port, nowTimestamp, moonAgeDays));
   
   // Next Tide & State
   const futureTides = highLows.filter(hl => hl.timestamp > nowTimestamp);
@@ -190,7 +226,8 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
   } else if (highLows.length > 0) {
     nextTide = highLows[highLows.length - 1];
   } else {
-    nextTide = { type: 'pleamar', time: '14:30', height: port.baseHeight + port.amplitude, timestamp: dayStart + 14.5 * 3600 * 1000 };
+    const fallbackMs = dayStart + 14.5 * 3600 * 1000;
+    nextTide = { type: 'pleamar', time: formatTimeHHMM(fallbackMs, port.timezone), height: port.baseHeight + port.amplitude, timestamp: fallbackMs };
   }
   
   // Time left string
@@ -220,7 +257,10 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
   const weather = generateMarineWeather(port, targetDate);
 
   const daysArr = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  const dateStr = targetDate.toISOString().split('T')[0];
+  // Built directly from the selected Y/M/D (not toISOString(), which converts
+  // to UTC and could silently shift to the previous/next day depending on
+  // the visitor's own timezone offset).
+  const dateStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
 
   return {
     dateStr,
@@ -234,6 +274,120 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
     nextTideTimeLeftStr,
     solunar,
     weather,
+    tideSource: 'modelo-estimado',
+  };
+}
+
+/**
+ * Rebuilds highLows + hourlyPoints from a set of REAL official tide anchor
+ * points (time + height), interpolating a smooth visual curve between them
+ * with a raised-cosine shape (the standard approximation used to sketch a
+ * tide curve between known high/low points). This lets the chart stay
+ * visually consistent with officially-sourced pleamar/bajamar times instead
+ * of the internal harmonic model, whenever real data is available.
+ */
+export function applyOfficialTideAnchors(
+  base: TideDayData,
+  anchors: { timestamp: number; height: number; type: 'pleamar' | 'bajamar' }[],
+  port: Port,
+  sourceLabel: string
+): TideDayData {
+  if (anchors.length < 2) return base;
+
+  const sorted = [...anchors].sort((a, b) => a.timestamp - b.timestamp);
+
+  const highLows: HighLowTide[] = sorted.map((a) => ({
+    type: a.type,
+    time: formatTimeHHMM(a.timestamp, port.timezone),
+    height: round2(a.height),
+    timestamp: a.timestamp,
+  }));
+
+  // Build a smooth interpolated curve across the day using the real anchors.
+  const hourlyPoints: HourlyTidePoint[] = [];
+  const dayStart = sorted[0].timestamp - (sorted[0].timestamp % (24 * 3600 * 1000));
+  for (let mins = 0; mins <= 24 * 60; mins += 30) {
+    const t = dayStart + mins * 60000;
+    // Find the bracketing anchors (clamped at the edges).
+    let prev = sorted[0];
+    let next = sorted[sorted.length - 1];
+    for (let i = 0; i < sorted.length - 1; i++) {
+      if (sorted[i].timestamp <= t && sorted[i + 1].timestamp >= t) {
+        prev = sorted[i];
+        next = sorted[i + 1];
+        break;
+      }
+    }
+    let height: number;
+    if (t <= prev.timestamp) height = prev.height;
+    else if (t >= next.timestamp) height = next.height;
+    else {
+      const frac = (t - prev.timestamp) / (next.timestamp - prev.timestamp);
+      height = prev.height + (next.height - prev.height) * (1 - Math.cos(Math.PI * frac)) / 2;
+    }
+    const label = formatTimeHHMM(t, port.timezone);
+    hourlyPoints.push({ time: label, timeLabel: label, height: round2(height), timestamp: t });
+  }
+
+  return {
+    ...base,
+    highLows,
+    hourlyPoints,
+    tideSource: 'IHM',
+    tideSourceDetail: sourceLabel,
+  };
+}
+
+// Real solar position (NOAA simplified solar calculator equations).
+// Free, no API needed - computes actual sunrise/sunset for the port's own
+// latitude/longitude and exact calendar day, instead of a generic
+// month-only approximation that repeated the same time all month.
+function computeSolarTimes(date: Date, lat: number, lng: number, timezone: string) {
+  const startOfYearUtc = Date.UTC(date.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((date.getTime() - startOfYearUtc) / 86400000);
+
+  const latRad = (lat * Math.PI) / 180;
+  const gamma = ((2 * Math.PI) / 365) * (dayOfYear - 1);
+
+  // Equation of time, in minutes
+  const eqTimeMin =
+    229.18 *
+    (0.000075 +
+      0.001868 * Math.cos(gamma) -
+      0.032077 * Math.sin(gamma) -
+      0.014615 * Math.cos(2 * gamma) -
+      0.040849 * Math.sin(2 * gamma));
+
+  // Solar declination, in radians
+  const decl =
+    0.006918 -
+    0.399912 * Math.cos(gamma) +
+    0.070257 * Math.sin(gamma) -
+    0.006758 * Math.cos(2 * gamma) +
+    0.000907 * Math.sin(2 * gamma) -
+    0.002697 * Math.cos(3 * gamma) +
+    0.00148 * Math.sin(3 * gamma);
+
+  const zenith = (90.833 * Math.PI) / 180; // accounts for atmospheric refraction + solar radius
+  let cosH = (Math.cos(zenith) - Math.sin(latRad) * Math.sin(decl)) / (Math.cos(latRad) * Math.cos(decl));
+  cosH = Math.max(-1, Math.min(1, cosH)); // clamp: polar day/night edge cases
+  const haDeg = (Math.acos(cosH) * 180) / Math.PI;
+
+  const solarNoonUtcMin = 720 - 4 * lng - eqTimeMin;
+  const sunriseUtcMin = solarNoonUtcMin - haDeg * 4;
+  const sunsetUtcMin = solarNoonUtcMin + haDeg * 4;
+
+  // Build real UTC timestamps for that calendar day, then hand back the
+  // fractional LOCAL hour (in the port's own timezone) for each event -
+  // consistent with how the rest of the engine treats "local hours".
+  const dayStartUtc = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const toLocalFractionalHour = (utcMin: number) =>
+    getZonedFractionalHours(dayStartUtc + utcMin * 60000, timezone);
+
+  return {
+    sunriseHour: toLocalFractionalHour(sunriseUtcMin),
+    sunsetHour: toLocalFractionalHour(sunsetUtcMin),
+    solarNoonHour: toLocalFractionalHour(solarNoonUtcMin),
   };
 }
 
@@ -241,10 +395,10 @@ export function getTideDayData(port: Port, targetDate: Date, nowTimestamp: numbe
 export function calculateSolunarData(date: Date, port: Port, moonAgeDays: number): SolunarData {
   const moonPhaseInfo = getMoonPhaseDetails(moonAgeDays);
   
-  // Calculate approximate astronomical times
-  const sunriseHour = 6.8 + Math.sin((date.getMonth() - 2) * 0.5) * 0.7; // ~06:30 - 07:30
-  const sunsetHour = 20.2 - Math.sin((date.getMonth() - 2) * 0.5) * 0.7; // ~19:30 - 21:00
-  const solarNoonHour = (sunriseHour + sunsetHour) / 2;
+  // Real astronomical sunrise/sunset/solar noon for this exact date and
+  // this port's real latitude/longitude (was previously a fixed value
+  // that only changed with the month, identical for every day within it).
+  const { sunriseHour, sunsetHour, solarNoonHour } = computeSolarTimes(date, port.lat, port.lng, port.timezone);
   
   // Moon transit shifts ~50 mins each day
   const moonTransitHour = (moonAgeDays * 0.8) % 24;
@@ -366,6 +520,15 @@ export function generateMarineWeather(port: Port, date: Date): MarineWeather {
   const conditions = ['Despejado', 'Soleado con brisa', 'Parcialmente nublado', 'Nubes y claros', 'Ligeros chubascos marinos'];
   const condIdx = Math.floor(pseudoRand(5) * conditions.length);
 
+  // Primary groundswell: usually a bit longer-period and slightly rotated
+  // from the local wind-driven wave, which is a realistic approximation
+  // when no live swell partition data is available.
+  const waveDeg = windDeg;
+  const swellDegOffset = (pseudoRand(12) - 0.5) * 40;
+  const swellDeg = Math.round((waveDeg + swellDegOffset + 360) % 360);
+  const swellHeight = Math.round((waveHeight * (0.75 + pseudoRand(13) * 0.35)) * 10) / 10;
+  const swellPeriod = Math.round(9 + pseudoRand(14) * 6);
+
   return {
     temp,
     feelsLike,
@@ -381,7 +544,12 @@ export function generateMarineWeather(port: Port, date: Date): MarineWeather {
     waveHeightMeters: waveHeight,
     wavePeriodSeconds: Math.round(7 + pseudoRand(6) * 5),
     waveDirection: directions[(dirIdx + 1) % directions.length],
+    waveDegrees: waveDeg,
     seaStateName: seaState,
+    swellHeightMeters: swellHeight,
+    swellPeriodSeconds: swellPeriod,
+    swellDirection: directions[Math.round(swellDeg / 22.5) % 16],
+    swellDegrees: swellDeg,
     waterTemp: port.waterTempAvg,
     pressureHpa: Math.round(1012 + pseudoRand(7) * 12),
     pressureTrend: pseudoRand(8) > 0.6 ? 'ascenso' : (pseudoRand(8) < 0.3 ? 'descenso' : 'estable'),

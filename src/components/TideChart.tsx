@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { Waves, Clock, ArrowUpRight, ArrowDownRight, Radio } from 'lucide-react';
 import { TideDayData, Port, UserUnits } from '../types';
+import { getZonedFractionalHours, formatZonedHHMM, getUtcOffsetLabel, getZoneAbbreviation } from '../utils/timezoneHelpers';
 
 interface TideChartProps {
   dayData: TideDayData;
@@ -69,9 +70,28 @@ export const TideChart: React.FC<TideChartProps> = ({
   // Chronologically sorted chart data
   const chartData = basePoints.sort((a, b) => a.timestamp - b.timestamp);
 
-  // Current time finding
+  // Give the Y axis extra headroom above/below the real min/max so that the
+  // high/low tide time badges (which float above/below their dot) always
+  // have room to render fully inside the chart's drawing area, instead of
+  // being clipped by the SVG canvas edge when a peak sits right at the top
+  // or bottom of the curve.
+  const heightValues = chartData.map(d => d.height);
+  const dataMinHeight = heightValues.length ? Math.min(...heightValues) : 0;
+  const dataMaxHeight = heightValues.length ? Math.max(...heightValues) : 1;
+  const heightRange = dataMaxHeight - dataMinHeight || 1;
+  const yAxisPadding = Math.max(heightRange * 0.22, 0.35);
+  const yAxisDomain: [number, number] = [
+    Math.round((dataMinHeight - yAxisPadding) * 100) / 100,
+    Math.round((dataMaxHeight + yAxisPadding) * 100) / 100,
+  ];
+
+  // Current time finding - using the PORT'S own local time, not the
+  // visitor's browser clock, so the "AHORA" marker lands on the right
+  // point of the curve regardless of where in the world the visitor is.
   const now = new Date();
-  const currentMinutesTotal = now.getHours() * 60 + now.getMinutes();
+  const nowMs = now.getTime();
+  const portFractionalHours = getZonedFractionalHours(nowMs, port.timezone);
+  const currentMinutesTotal = portFractionalHours * 60;
 
   const currentPoint = chartData.length > 0
     ? chartData.reduce((prev, curr) => {
@@ -92,7 +112,7 @@ export const TideChart: React.FC<TideChartProps> = ({
 
     // 1. Live Current Position (Green pulsing dot with time badge)
     if (isLiveNow) {
-      const nowTimeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const nowTimeStr = formatZonedHHMM(nowMs, port.timezone);
       return (
         <g key={`live-dot-${payload.time}`}>
           <circle
@@ -156,7 +176,7 @@ export const TideChart: React.FC<TideChartProps> = ({
       const labelText = `${arrowSymbol} ${payload.time}h (${formattedHeight})`;
 
       const textLen = labelText.length;
-      const badgeWidth = Math.max(76, textLen * 6.2 + 10);
+      const badgeWidth = Math.max(70, textLen * 5.7 + 8);
       const halfWidth = badgeWidth / 2;
 
       return (
@@ -248,8 +268,32 @@ export const TideChart: React.FC<TideChartProps> = ({
             </div>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            Curva hidrométrica armónica continua con indicador temporal en vivo (punto verde parpadeante)
+            Curva hidrométrica armónica continua con indicador temporal en vivo (punto verde parpadeante) · Todas las horas en <strong className="text-slate-300">hora local de {port.name.split(' (')[0]}</strong> ({getZoneAbbreviation(Date.now(), port.timezone)}, {getUtcOffsetLabel(Date.now(), port.timezone)})
           </p>
+          {dayData.tideSource === 'IHM' ? (
+            <p className="text-[11px] text-emerald-400/90 mt-1 flex items-center gap-1">
+              <span>✓</span>
+              <span>
+                Horarios de pleamar/bajamar de la estación oficial <strong className="text-emerald-300">{dayData.tideSourceDetail || 'IHM'}</strong> (Instituto Hidrográfico de la Marina). La curva entre puntos es una interpolación visual.
+              </span>
+            </p>
+          ) : (
+            <p className="text-[11px] text-amber-400/90 mt-1 flex items-center gap-1">
+              <span>⚠</span>
+              <span>
+                Modelo astronómico de aproximación, no oficial. Verifica siempre los horarios en la{' '}
+                <a
+                  href="https://armada.defensa.gob.es/ihm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-amber-300 hover:text-amber-200"
+                >
+                  web oficial del Instituto Hidrográfico de la Marina
+                </a>
+                {' '}antes de cualquier actividad donde la precisión sea crítica.
+              </span>
+            </p>
+          )}
         </div>
 
         {/* Range Controls & Legend */}
@@ -286,7 +330,7 @@ export const TideChart: React.FC<TideChartProps> = ({
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={chartData}
-            margin={{ top: 20, right: 10, left: -20, bottom: 0 }}
+            margin={{ top: 40, right: 44, left: -2, bottom: 26 }}
           >
             <defs>
               <linearGradient id="tideGradient" x1="0" y1="0" x2="0" y2="1">
@@ -303,6 +347,7 @@ export const TideChart: React.FC<TideChartProps> = ({
               fontSize={11}
               tickLine={false}
               interval={3}
+              padding={{ left: 22, right: 22 }}
             />
 
             <YAxis
@@ -310,7 +355,7 @@ export const TideChart: React.FC<TideChartProps> = ({
               fontSize={11}
               tickLine={false}
               unit={` ${heightUnitLabel}`}
-              domain={['auto', 'auto']}
+              domain={yAxisDomain}
             />
 
             <Tooltip content={<CustomTooltip />} />

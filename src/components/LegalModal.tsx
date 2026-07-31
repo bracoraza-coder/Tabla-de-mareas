@@ -141,9 +141,9 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                   En cumplimiento del artículo 10 de la Ley 34/2002, de 11 de julio, de Servicios de la Sociedad de la Información y Comercio Electrónico (LSSI-CE), se facilitan a continuación los datos informativos de la aplicación:
                 </p>
                 <ul className="list-disc pl-5 space-y-1 text-slate-400 font-mono text-xs">
-                  <li><strong>Denominación del Servicio:</strong> Tabla de Mareas Pro & Telemetría Marina</li>
+                  <li><strong>Denominación del Servicio:</strong> Tabla de Mareas Pro (Modelo Astronómico + Meteo en Vivo)</li>
                   <li><strong>Finalidad:</strong> Consulta de datos hidrométricos, previsiones meteorológicas y actividad solunar náutica.</li>
-                  <li><strong>Dominio y Entorno:</strong> Google Cloud Platform / AI Studio Sandbox.</li>
+                  <li><strong>Dominio y Entorno:</strong> Aplicación web estática (Vercel), sin servidor backend propio.</li>
                   <li><strong>Contacto Técnico:</strong> soporte-nautico@mareaspro.app</li>
                 </ul>
               </div>
@@ -165,7 +165,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                   3. Fuentes de Datos Abiertas y Licencias MetOD
                 </h3>
                 <p>
-                  Los datos meteorológicos, de viento y oleaje son obtenidos en tiempo real a través de las APIs abiertas de <strong>Open-Meteo Weather & Marine API</strong> bajo licencia <strong className="text-cyan-400">CC BY 4.0</strong>. Las tablas de mareas utilizan componentes armónicos astronómicos ajustados con datos públicos de referencia costera internacional (IHO / Puertos de España / NOAA).
+                  Los datos meteorológicos, de viento y oleaje son obtenidos en tiempo real a través de las APIs abiertas de <strong>Open-Meteo Weather & Marine API</strong> bajo licencia <strong className="text-cyan-400">CC BY 4.0</strong>. Las tablas de mareas se calculan con un modelo astronómico propio de componentes armónicos (M2, S2, N2), calibrado y verificado progresivamente puerto a puerto contra los horarios publicados por el <strong>Instituto Hidrográfico de la Marina (IHM)</strong>, autoridad oficial española en predicción de mareas. Es un modelo de aproximación, no una redistribución directa de datos oficiales: para navegación o cualquier uso donde la precisión sea crítica, verifica siempre los horarios en la <a href="https://armada.defensa.gob.es/ihm" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline">web oficial del IHM</a>.
                 </p>
               </div>
             </div>
@@ -203,7 +203,21 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
               <div className="space-y-3">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  2. Almacenamiento Local (Local Storage)
+                  2. Consulta de Datos Meteorológicos en Tiempo Real
+                </h3>
+                <p>
+                  Para mostrar viento, oleaje y temperatura en vivo, su navegador realiza una petición directa y gratuita a <strong className="text-cyan-300">Open-Meteo</strong> (servicio meteorológico abierto, sin necesidad de cuenta ni clave de API). Esta aplicación no dispone de servidor propio: su dispositivo se conecta directamente a Open-Meteo, igual que lo haría al cargar cualquier imagen de una web.
+                </p>
+                <ul className="list-disc pl-5 space-y-1.5 text-slate-300">
+                  <li><strong>Datos enviados:</strong> únicamente las coordenadas del puerto que ha seleccionado (no su ubicación personal, salvo que use el botón de GPS descrito arriba, y en tal caso solo se usan para elegir el puerto más cercano).</li>
+                  <li><strong>Sin identificación:</strong> no se envían cookies, nombres, correos ni ningún identificador de usuario en estas peticiones.</li>
+                  <li><strong>Sin intermediarios propios:</strong> no registramos, guardamos ni procesamos estas peticiones en ningún servidor nuestro; simplemente no existe tal servidor.</li>
+                </ul>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  3. Almacenamiento Local (Local Storage)
                 </h3>
                 <p>
                   Para mejorar la experiencia de usuario, almacenamos en el navegador (Local Storage):
@@ -222,10 +236,10 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
               <div className="space-y-3">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  3. Derechos del Usuario (ARCO / RGPD)
+                  4. Derechos del Usuario (ARCO / RGPD)
                 </h3>
                 <p>
-                  Dado que no almacenamos datos personales en servidores centralizados, puede eliminar todos sus datos y ajustes en cualquier momento limpiando el almacenamiento local o la caché del navegador.
+                  Dado que no almacenamos datos personales en servidores centralizados —porque no existe tal servidor—, puede eliminar todos sus datos y ajustes en cualquier momento limpiando el almacenamiento local o la caché del navegador.
                 </p>
               </div>
             </div>

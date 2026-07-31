@@ -1,7 +1,7 @@
 import { Port, NotificationSettings, ScheduledAlert, UserUnits } from '../types';
 import { PORTS_DATABASE } from '../data/portsData';
 import { getTideDayData, formatHeight } from './tideEngine';
-import { fetchLiveIhmTides } from './ihmFetcher';
+import { formatZonedHHMM } from './timezoneHelpers';
 
 export function getNotificationPermission(): NotificationPermission | 'unsupported' {
   if (typeof window === 'undefined' || !('Notification' in window)) {
@@ -57,20 +57,19 @@ export function sendTestNotification(portName: string = 'Cádiz'): boolean {
 /**
  * Calculates upcoming scheduled alerts for subscribed ports for today based on settings.
  */
-export async function getScheduledAlertsForToday(
+export function getScheduledAlertsForToday(
   subscribedPortIds: string[],
   settings: NotificationSettings,
   units: UserUnits,
   now: Date = new Date()
-): Promise<ScheduledAlert[]> {
+): ScheduledAlert[] {
   if (!settings.enabled) return [];
 
   const alerts: ScheduledAlert[] = [];
   const portsToSearch = PORTS_DATABASE.filter(p => subscribedPortIds.includes(p.id));
 
-  for (const port of portsToSearch) {
-    const initialData = getTideDayData(port, now, now.getTime());
-    const dayData = await fetchLiveIhmTides(port, now, initialData);
+  portsToSearch.forEach(port => {
+    const dayData = getTideDayData(port, now, now.getTime());
     const isMareaViva = dayData.coefficient >= 80;
 
     dayData.highLows.forEach(hl => {
@@ -86,7 +85,7 @@ export async function getScheduledAlertsForToday(
       const tideTime = new Date(hl.timestamp);
       const alertTime = new Date(tideTime.getTime() - settings.alertTimingMinutes * 60 * 1000);
 
-      const alertTimeStr = alertTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const alertTimeStr = formatZonedHHMM(alertTime.getTime(), port.timezone);
 
       alerts.push({
         id: `${port.id}_${hl.type}_${hl.time}`,
@@ -100,7 +99,7 @@ export async function getScheduledAlertsForToday(
         timestamp: hl.timestamp,
       });
     });
-  }
+  });
 
   // Sort by timestamp
   return alerts.sort((a, b) => a.timestamp - b.timestamp);
@@ -109,7 +108,7 @@ export async function getScheduledAlertsForToday(
 /**
  * Check if any alert needs to be sent right now
  */
-export async function checkAndTriggerTideAlerts(
+export function checkAndTriggerTideAlerts(
   subscribedPortIds: string[],
   settings: NotificationSettings,
   units: UserUnits,
@@ -122,9 +121,8 @@ export async function checkAndTriggerTideAlerts(
   const nowMs = now.getTime();
   const portsToSearch = PORTS_DATABASE.filter(p => subscribedPortIds.includes(p.id));
 
-  for (const port of portsToSearch) {
-    const initialData = getTideDayData(port, now, nowMs);
-    const dayData = await fetchLiveIhmTides(port, now, initialData);
+  portsToSearch.forEach(port => {
+    const dayData = getTideDayData(port, now, nowMs);
 
     dayData.highLows.forEach(hl => {
       const isPleamar = hl.type === 'pleamar';
@@ -174,5 +172,5 @@ export async function checkAndTriggerTideAlerts(
         }
       }
     });
-  }
+  });
 }

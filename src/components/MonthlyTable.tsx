@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import { Port, MonthlyTideRow, UserUnits } from '../types';
 import { getMonthlyTideData } from '../utils/tideEngine';
-import { fetchMonthlyIhmTides } from '../utils/ihmFetcher';
 
 interface MonthlyTableProps {
   port: Port;
@@ -40,19 +39,8 @@ export const MonthlyTable: React.FC<MonthlyTableProps> = ({
   ];
 
   useEffect(() => {
-    let isMounted = true;
-    const initialData = getMonthlyTideData(port, currentYear, currentMonth);
-    setRows(initialData);
-
-    fetchMonthlyIhmTides(port, currentYear, currentMonth, initialData).then(finalData => {
-      if (isMounted) {
-        setRows(finalData);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
+    const data = getMonthlyTideData(port, currentYear, currentMonth);
+    setRows(data);
   }, [port, currentYear, currentMonth]);
 
   const handlePrevMonth = () => {
@@ -125,7 +113,7 @@ export const MonthlyTable: React.FC<MonthlyTableProps> = ({
             </h2>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            Calendario oficial de pleamares, bajamares y coeficientes astronómicos para {port.name}
+            Calendario estimado de pleamares, bajamares y coeficientes astronómicos para {port.name}
           </p>
         </div>
 

@@ -1,9 +1,9 @@
 export interface Port {
   id: string;
-  ihmId?: number;
   name: string;
   region: string;
   country: string;
+  timezone: string; // IANA timezone, e.g. "Europe/Madrid", "Asia/Tokyo"
   lat: number;
   lng: number;
   baseHeight: number; // mean sea level in meters
@@ -69,7 +69,13 @@ export interface MarineWeather {
   waveHeightMeters: number;
   wavePeriodSeconds: number;
   waveDirection: string;
+  waveDegrees: number;
   seaStateName: string; // "Mar Calma", "Marejadilla", "Marejada", "Fuerte Marejada"
+  // Primary groundswell (the surfable component, separate from local wind chop)
+  swellHeightMeters: number;
+  swellPeriodSeconds: number;
+  swellDirection: string;
+  swellDegrees: number;
   waterTemp: number; // °C
   pressureHpa: number;
   pressureTrend: 'ascenso' | 'descenso' | 'estable';
@@ -90,6 +96,8 @@ export interface TideDayData {
   nextTideTimeLeftStr: string;
   solunar: SolunarData;
   weather: MarineWeather;
+  tideSource: 'IHM' | 'modelo-estimado';
+  tideSourceDetail?: string;
 }
 
 export interface MonthlyTideRow {
@@ -127,7 +135,6 @@ export interface NotificationSettings {
 
 export interface ScheduledAlert {
   id: string;
-  ihmId?: number;
   portId: string;
   portName: string;
   tideType: 'pleamar' | 'bajamar';

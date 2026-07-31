@@ -1,22 +1,24 @@
 {
-  "short_name": "Mareas Pro",
   "name": "Tabla de Mareas Pro & Telemetría Marina",
-  "description": "Previsión de mareas, horas de pleamar y bajamar, viento, oleaje y solunar.",
+  "short_name": "Tabla de Mareas",
+  "description": "Tabla de mareas y previsión de surf en tiempo real, con datos de swell, viento y gráfico solunar para puertos y costas de España e Iberoamérica.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#0284c7",
+  "lang": "es",
   "icons": [
     {
       "src": "/icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
-      "sizes": "192x192"
+      "purpose": "any maskable"
     },
     {
-      "src": "/favicon-512.png",
+      "src": "/icon-512.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "sizes": "512x512"
+      "purpose": "any maskable"
     }
-  ],
-  "start_url": "/",
-  "background_color": "#020617",
-  "theme_color": "#0369a1",
-  "display": "standalone",
-  "orientation": "portrait"
+  ]
 }

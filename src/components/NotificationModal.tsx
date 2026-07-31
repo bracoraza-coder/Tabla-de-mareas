@@ -89,16 +89,11 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   };
 
   const favoritePortsList = PORTS_DATABASE.filter(p => favorites.includes(p.id));
-  const [scheduledAlerts, setScheduledAlerts] = React.useState<ScheduledAlert[]>([]);
-  React.useEffect(() => {
-    let active = true;
-    getScheduledAlertsForToday(settings.subscribedPortIds, settings, units)
-      .then(alerts => {
-        if (active) setScheduledAlerts(alerts);
-      })
-      .catch(console.error);
-    return () => { active = false; };
-  }, [settings.subscribedPortIds, settings, units]);
+  const scheduledAlerts: ScheduledAlert[] = getScheduledAlertsForToday(
+    settings.subscribedPortIds,
+    settings,
+    units
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in" id="notifications-modal-overlay">
