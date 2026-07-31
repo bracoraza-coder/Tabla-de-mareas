@@ -81,31 +81,122 @@ async function fetchJson(url) {
 async function getStationList() {
   const now = Date.now();
   if (stationListCache.data && now - stationListCache.fetchedAt < STATION_LIST_TTL_MS) {
-    return { data: stationListCache.data, diag: null };
+    return { data: stationListCache.data, diag: null, usedFallback: false };
   }
   const url = `${IHM_BASE}?request=getlist&format=json`;
   const diag = await fetchDiagnostic(url);
-  if (!diag.json) return { data: stationListCache.data, diag }; // serve stale cache over nothing, if we have it
+  const parsed = extractStations(diag.json);
+  if (parsed.length === 0) {
+    // Live call failed or returned something unparseable - use the stale
+    // cache if we have one, otherwise the verified fallback snapshot.
+    if (stationListCache.data) return { data: stationListCache.data, diag, usedFallback: false };
+    return { data: { estaciones: { puertos: STATION_LIST_FALLBACK.map(s => ({ id: s.id, code: s.code, puerto: s.name })) } }, diag, usedFallback: true };
+  }
   stationListCache = { data: diag.json, fetchedAt: now };
-  return { data: diag.json, diag };
+  return { data: diag.json, diag, usedFallback: false };
 }
 
-// Extracts a flat array of {id, name} from whatever shape the IHM getlist
-// response turns out to be - written defensively since the exact schema
-// hasn't been verified against a live response yet.
+// Verified against a real live response (2026-07-31): the IHM wraps the
+// station list at estaciones.puertos[], each with {id, code, puerto, lat, lon}.
 function extractStations(raw) {
   if (!raw) return [];
-  const candidates = Array.isArray(raw) ? raw : raw.stations || raw.data || raw.list || raw.puertos || [];
-  if (!Array.isArray(candidates)) return [];
-  return candidates
+  const list = raw?.estaciones?.puertos;
+  if (!Array.isArray(list)) return [];
+  return list
     .map((s) => ({
-      id: s.id ?? s.ID ?? s.Id ?? s.idPuerto ?? s.codigo ?? null,
-      name: s.name ?? s.NAME ?? s.nombre ?? s.puerto ?? s.PUERTO ?? '',
+      id: s.id ?? null,
+      code: (s.code ?? '').toString(),
+      name: s.puerto ?? '',
     }))
-    .filter((s) => s.id !== null && s.name);
+    .filter((s) => s.id !== null && (s.code || s.name));
 }
 
-function findStationId(stations, portName) {
+// A hardcoded snapshot of the real station list, captured from a verified
+// live response, used ONLY if the live getlist call fails. This is real
+// data we've confirmed once, not a guess - a safety net, not a shortcut.
+const STATION_LIST_FALLBACK = [
+  { id: '71', code: 'aguarda', name: 'A Guarda' },
+  { id: '49', code: 'algeciras', name: 'Algeciras' },
+  { id: '57', code: 'arinaga', name: 'Arinaga (Gran Canaria)' },
+  { id: '53', code: 'arrecife', name: 'Arrecife (Lanzarote)' },
+  { id: '7', code: 'aviles', name: 'Avilés (San Juan de Nieva)' },
+  { id: '32', code: 'ayamonte', name: 'Ayamonte' },
+  { id: '30', code: 'baiona', name: 'Baiona' },
+  { id: '47', code: 'barbate', name: 'Barbate' },
+  { id: '72', code: 'Bermeo', name: 'Bermeo' },
+  { id: '2', code: 'bilbao', name: 'Bilbao' },
+  { id: '37', code: 'bonanza', name: 'Bonanza (Sanlúcar de Barrameda)' },
+  { id: '13', code: 'burela', name: 'Burela' },
+  { id: '42', code: 'cadiz', name: 'Cádiz' },
+  { id: '22', code: 'camarinas', name: 'Camariñas' },
+  { id: '16', code: 'carino', name: 'Cariño' },
+  { id: '17', code: 'cedeira', name: 'Cedeira' },
+  { id: '51', code: 'ceuta', name: 'Ceuta' },
+  { id: '39', code: 'chipiona', name: 'Chipiona' },
+  { id: '15', code: 'cillero', name: 'Cillero (Ría de Viveiro)' },
+  { id: '46', code: 'conil', name: 'Conil' },
+  { id: '20', code: 'coruna', name: 'A Coruña' },
+  { id: '8', code: 'cudillero', name: 'Cudillero' },
+  { id: '41', code: 'elpuertosantamaria', name: 'El Puerto de Santa María' },
+  { id: '18', code: 'ferrol', name: 'Ferrol' },
+  { id: '23', code: 'fisterra', name: 'Fisterra' },
+  { id: '12', code: 'foz', name: 'Foz' },
+  { id: '44', code: 'gallineras', name: 'Gallineras' },
+  { id: '6', code: 'gijon', name: 'Gijón' },
+  { id: '64', code: 'granadilla', name: 'Granadilla (Tenerife)' },
+  { id: '33', code: 'islacanela', name: 'Marina de Isla Canela' },
+  { id: '34', code: 'islacristina', name: 'Isla Cristina' },
+  { id: '43', code: 'lacarraca', name: 'La Carraca' },
+  { id: '70', code: 'langosteira', name: 'Langosteira (Puerto exterior de A Coruña)' },
+  { id: '31', code: 'lisboa', name: 'Lisboa' },
+  { id: '4', code: 'llanes', name: 'Llanes' },
+  { id: '63', code: 'loscristianos', name: 'Los Cristianos (Tenerife)' },
+  { id: '61', code: 'losgigantes', name: 'Los Gigantes (Tenerife)' },
+  { id: '21', code: 'malpica', name: 'Malpica' },
+  { id: '28', code: 'marin', name: 'Marín (Ría de Pontevedra)' },
+  { id: '36', code: 'mazagon', name: 'Mazagón (Huelva)' },
+  { id: '55', code: 'morrojable', name: 'Morro Jable (Fuerteventura)' },
+  { id: '9', code: 'navia', name: 'Navia' },
+  { id: '1', code: 'pasajes', name: 'Pasajes' },
+  { id: '58', code: 'pasitoblanco', name: 'Pasito Blanco (Gran Canaria)' },
+  { id: '24', code: 'portosin', name: 'Portosín (Ría de Muros y Noia)' },
+  { id: '62', code: 'ptocruz', name: 'Puerto de la Cruz (Tenerife)' },
+  { id: '67', code: 'ptolaestaca', name: 'Puerto de la Estaca (El Hierro)' },
+  { id: '56', code: 'ptolaluz', name: 'Puerto de la Luz (Gran Canaria)' },
+  { id: '59', code: 'ptolasnieves', name: 'Puerto de las Nieves (Gran Canaria)' },
+  { id: '54', code: 'ptorosario', name: 'Puerto del Rosario (Fuerteventura)' },
+  { id: '35', code: 'puntaumbria', name: 'Punta Umbría' },
+  { id: '11', code: 'ribadeo', name: 'Ribadeo' },
+  { id: '5', code: 'ribadesella', name: 'Ribadesella' },
+  { id: '40', code: 'rota', name: 'Rota' },
+  { id: '19', code: 'sada', name: 'Sada Fontán (Ría de Betanzos)' },
+  { id: '14', code: 'sancibrao', name: 'Alúmina Española (San Cibrao)' },
+  { id: '45', code: 'sanctipetri', name: 'Sancti Petri' },
+  { id: '65', code: 'sansebastiangomera', name: 'San Sebastián de la Gomera' },
+  { id: '3', code: 'santander', name: 'Santander' },
+  { id: '25', code: 'santauxia', name: 'Santa Uxía de Ribeíra (Ría de Arousa)' },
+  { id: '27', code: 'sanxenxo', name: 'Sanxenxo (Ría de Pontevedra)' },
+  { id: '38', code: 'sevilla', name: 'Sevilla' },
+  { id: '50', code: 'sotogrande', name: 'Sotogrande' },
+  { id: '66', code: 'stacruzpalma', name: 'Santa Cruz de La Palma' },
+  { id: '60', code: 'stacruztenerife', name: 'Santa Cruz de Tenerife' },
+  { id: '52', code: 'tanger', name: 'Tánger' },
+  { id: '10', code: 'tapia', name: 'Tapia' },
+  { id: '48', code: 'tarifa', name: 'Tarifa' },
+  { id: '29', code: 'vigo', name: 'Vigo' },
+  { id: '26', code: 'vilagarcia', name: 'Vilagarcía (Ría de Arousa)' },
+];
+
+function findStationId(stations, portName, portCode) {
+  // 1) Exact match on the normalized IHM "code" - most reliable, since our
+  // own port ids are already similar slugs (e.g. 'isla-cristina' vs 'islacristina').
+  if (portCode) {
+    const normCode = normalizeName(portCode).replace(/\s+/g, '');
+    const exact = stations.find((s) => normalizeName(s.code).replace(/\s+/g, '') === normCode);
+    if (exact) return exact;
+  }
+
+  // 2) Fallback: fuzzy match on the display name.
   const target = normalizeName(portName);
   if (!target) return null;
 
@@ -126,19 +217,22 @@ function findStationId(stations, portName) {
   return bestScore >= 60 ? best : null;
 }
 
+// Verified against a real live response (2026-07-31): tide events live at
+// mareas.datos.marea[], each with {hora, altura, tipo}.
 function extractTideEvents(raw) {
-  if (!raw) return null;
-  const events = Array.isArray(raw) ? raw : raw.mareas || raw.tides || raw.data || raw.predicciones || null;
+  const events = raw?.mareas?.datos?.marea;
   if (!Array.isArray(events)) return null;
 
   const parsed = events
     .map((e) => {
-      const time = e.hora ?? e.time ?? e.datetime ?? e.fecha ?? null;
-      const height = e.altura ?? e.height ?? e.value ?? null;
-      const rawType = (e.tipo ?? e.type ?? '').toString().toLowerCase();
-      const type = rawType.includes('baj') || rawType === 'l' || rawType === 'low' ? 'bajamar' : 'pleamar';
-      if (time === null || height === null) return null;
-      return { time: String(time), height: Number(height), type };
+      const time = e.hora;
+      const height = e.altura;
+      const rawType = (e.tipo || '').toString().toLowerCase();
+      const type = rawType.includes('baj') ? 'bajamar' : 'pleamar';
+      if (!time || height === undefined) return null;
+      const h = Number(height);
+      if (Number.isNaN(h)) return null;
+      return { time: String(time), height: h, type };
     })
     .filter(Boolean);
 
@@ -190,7 +284,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    const station = findStationId(stations, portName);
+    const station = findStationId(stations, portName, port);
     if (!station) {
       res.status(200).json({
         ok: false,
