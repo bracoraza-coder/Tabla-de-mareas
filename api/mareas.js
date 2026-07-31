@@ -39,37 +39,55 @@ function normalizeName(s) {
     .trim();
 }
 
-async function fetchJson(url, timeoutMs = 6000) {
+async function fetchDiagnostic(url, timeoutMs = 6000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/json, text/plain, */*',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+      },
+    });
     clearTimeout(timeout);
-    if (!res.ok) return null;
+    const contentType = res.headers.get('content-type') || '';
     const text = await res.text();
+    let json = null;
     try {
-      return JSON.parse(text);
+      json = JSON.parse(text);
     } catch {
-      // The IHM API defaults to plain text / HTML for some requests -
-      // treat unparsable responses as a failure rather than guessing.
-      return null;
+      json = null;
     }
-  } catch {
+    return {
+      ok: res.ok,
+      status: res.status,
+      contentType,
+      bodyPreview: text.slice(0, 500),
+      json,
+      url,
+    };
+  } catch (err) {
     clearTimeout(timeout);
-    return null;
+    return { ok: false, status: 0, error: String(err && err.message || err), url };
   }
+}
+
+async function fetchJson(url) {
+  const diag = await fetchDiagnostic(url);
+  return diag.json;
 }
 
 async function getStationList() {
   const now = Date.now();
   if (stationListCache.data && now - stationListCache.fetchedAt < STATION_LIST_TTL_MS) {
-    return stationListCache.data;
+    return { data: stationListCache.data, diag: null };
   }
   const url = `${IHM_BASE}?request=getlist&format=json`;
-  const data = await fetchJson(url);
-  if (!data) return stationListCache.data; // serve stale cache over nothing, if we have it
-  stationListCache = { data, fetchedAt: now };
-  return data;
+  const diag = await fetchDiagnostic(url);
+  if (!diag.json) return { data: stationListCache.data, diag }; // serve stale cache over nothing, if we have it
+  stationListCache = { data: diag.json, fetchedAt: now };
+  return { data: diag.json, diag };
 }
 
 // Extracts a flat array of {id, name} from whatever shape the IHM getlist
@@ -130,7 +148,17 @@ function extractTideEvents(raw) {
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=1800'); // edge cache 30 min
 
-  const { port, portName, date } = req.query;
+  const { port, portName, date, debug } = req.query;
+
+  // Diagnostic mode: shows exactly what the IHM responded, raw, so we can
+  // fix the parsing against real data instead of guessing blindly.
+  if (debug) {
+    const listDiag = await fetchDiagnostic(`${IHM_BASE}?request=getlist&format=json`);
+    const dateParam = (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toISOString().slice(0, 10)).replace(/-/g, '');
+    const tideDiag = await fetchDiagnostic(`${IHM_BASE}?request=gettide&id=${encodeURIComponent(port || '6')}&format=json&date=${dateParam}`);
+    res.status(200).json({ debug: true, getlist: listDiag, gettide: tideDiag });
+    return;
+  }
 
   if (!portName || typeof portName !== 'string') {
     res.status(400).json({ ok: false, error: 'Falta el parámetro portName (nombre del puerto a buscar).' });
@@ -149,7 +177,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const stationListRaw = await getStationList();
+    const { data: stationListRaw, diag: listDiag } = await getStationList();
     const stations = extractStations(stationListRaw);
 
     if (stations.length === 0) {
@@ -157,6 +185,7 @@ export default async function handler(req, res) {
         ok: false,
         source: 'modelo-estimado',
         reason: 'No se pudo obtener el listado oficial de estaciones del IHM en este momento.',
+        hint: listDiag ? { status: listDiag.status, contentType: listDiag.contentType, bodyPreview: listDiag.bodyPreview } : undefined,
       });
       return;
     }
