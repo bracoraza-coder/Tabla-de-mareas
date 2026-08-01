@@ -278,13 +278,14 @@ export default function App() {
     if (!isViewingToday) return;
     const AUTO_REFRESH_MS = 10 * 60 * 1000;
     const interval = setInterval(() => {
-      const now = new Date();
-      const freshData = getTideDayData(selectedPort, selectedDate, now.getTime());
-      fetchLiveMarineWeather(selectedPort, freshData.weather).then(result => {
-        setDayData(prev => ({
-          ...freshData,
-          weather: result.isLive ? result.weather : prev.weather,
-        }));
+      fetchLiveMarineWeather(selectedPort, dayData.weather).then(result => {
+        if (result.isLive) {
+          // Only ever touch the weather field here. Tide times (official
+          // IHM or estimated) don't change within the same day, and must
+          // never be silently replaced back to the local model by this
+          // periodic refresh.
+          setDayData(curr => ({ ...curr, weather: result.weather }));
+        }
       });
     }, AUTO_REFRESH_MS);
     return () => clearInterval(interval);
