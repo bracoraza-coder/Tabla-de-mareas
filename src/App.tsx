@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { Header } from './components/Header';
-import { DebugPanel } from './components/DebugPanel';
 import { QuickNav } from './components/QuickNav';
 import { CurrentTideGauge } from './components/CurrentTideGauge';
 import { TideChart } from './components/TideChart';
@@ -386,9 +385,6 @@ export default function App() {
 
       {/* Main Container Content */}
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6 flex-1 w-full">
-
-        {/* TEMPORARY debug panel - remove once official-data pipeline is confirmed */}
-        <DebugPanel port={selectedPort} dayData={dayData} />
 
         {/* Real-time Water Height Live Gauge & Next Tide Countdown */}
         <div id="current-tide-gauge" className="scroll-mt-24">
