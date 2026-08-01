@@ -305,7 +305,13 @@ export function applyOfficialTideAnchors(
 
   // Build a smooth interpolated curve across the day using the real anchors.
   const hourlyPoints: HourlyTidePoint[] = [];
-  const dayStart = sorted[0].timestamp - (sorted[0].timestamp % (24 * 3600 * 1000));
+  // Midnight of the anchors' calendar day IN THE PORT'S OWN TIMEZONE - not a
+  // raw UTC-epoch modulo, which would land on UTC midnight and desync the
+  // grid by Spain's +1/+2h offset from the real local hours.
+  const firstAnchorLocal = getZonedParts(sorted[0].timestamp, port.timezone);
+  const dayStart = zonedTimeToUtc(
+    firstAnchorLocal.year, firstAnchorLocal.month, firstAnchorLocal.day, 0, 0, 0, port.timezone
+  );
   for (let mins = 0; mins <= 24 * 60; mins += 30) {
     const t = dayStart + mins * 60000;
     // Find the bracketing anchors (clamped at the edges).
