@@ -406,23 +406,16 @@ export default function App() {
       />
 
       {/* Section tabs: only the selected section is shown, large and centered */}
-      <QuickNav active={activeTab} onChange={setActiveTab} />
+      <QuickNav active={activeTab} onChange={(tab) => { setActiveTab(tab); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
 
-      {/* Main Container Content */}
+      {/* Main Container Content: only the active tab's content shows */}
       <main className="max-w-5xl mx-auto px-2 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 flex-1 w-full">
 
-        {/* Real-time Water Height Live Gauge & Next Tide Countdown - always visible summary */}
-        <div id="current-tide-gauge" className="scroll-mt-24">
-          <CurrentTideGauge
-            dayData={dayData}
-            port={selectedPort}
-            units={units}
-            isViewingToday={isViewingToday}
-          />
-        </div>
-
         {activeTab === 'grafico' && (
-          <TideChart dayData={dayData} port={selectedPort} units={units} />
+          <>
+            <CurrentTideGauge dayData={dayData} port={selectedPort} units={units} isViewingToday={isViewingToday} />
+            <TideChart dayData={dayData} port={selectedPort} units={units} />
+          </>
         )}
 
         {activeTab === 'surf' && (

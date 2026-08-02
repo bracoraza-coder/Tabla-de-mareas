@@ -13,6 +13,7 @@ import {
   Zap
 } from 'lucide-react';
 import { SolunarData } from '../types';
+import { FishingDiagram } from './gauges/FishingDiagram';
 import { MoonPhaseDisc } from './gauges/WeatherGauges';
 
 interface SolunarSectionProps {
@@ -93,6 +94,11 @@ export const SolunarSection: React.FC<SolunarSectionProps> = ({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Fish-o-meter: instant visual read of how good fishing is today */}
+      <div className="w-full h-56 sm:h-64 rounded-xl overflow-hidden border border-slate-800">
+        <FishingDiagram activityScore={activityScore} label={activityLabel} />
       </div>
 
       {/* Major & Minor Fishing Periods */}

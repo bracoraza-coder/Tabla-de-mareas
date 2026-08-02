@@ -2,6 +2,7 @@ import React from 'react';
 import { Waves, Wind, Timer, ShieldAlert, Sparkles, ArrowUp, Info, Ruler } from 'lucide-react';
 import { MarineWeather, TideDayData, UserUnits, Port } from '../types';
 import { getSurfConditions } from '../utils/surfEngine';
+import { SurfDiagram } from './gauges/SurfDiagram';
 
 interface SurfSectionProps {
   weather: MarineWeather;
@@ -55,6 +56,11 @@ export const SurfSection: React.FC<SurfSectionProps> = ({ weather, dayData, port
             Estado del mar de fondo (swell), altura y periodo de ola, calidad del viento y mejor franja horaria para surfear hoy en {portShortName} ({port.region}). Datos gratuitos, actualizados con el modelo oceánico de Open-Meteo.
           </p>
         </div>
+      </div>
+
+      {/* Surfer illustration: instantly shows if it's worth grabbing the board */}
+      <div className="w-full h-56 sm:h-64 rounded-xl overflow-hidden border border-slate-800">
+        <SurfDiagram canSurf={surf.score >= 4} score={surf.score} />
       </div>
 
       {/* Score + key stats grid */}

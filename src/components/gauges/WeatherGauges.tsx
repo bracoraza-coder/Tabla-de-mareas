@@ -67,8 +67,8 @@ export const PressureGauge: React.FC<PressureGaugeProps> = ({ value, min = 990, 
         />
       ))}
       {/* tick labels */}
-      <text x={cx - r - 4} y={cy + 6} textAnchor="middle" fontSize="9" fill="#64748b" fontFamily="monospace">{min}</text>
-      <text x={cx + r + 4} y={cy + 6} textAnchor="middle" fontSize="9" fill="#64748b" fontFamily="monospace">{max}</text>
+      <text x={cx - r - 4} y={cy + 6} textAnchor="middle" fontSize="12" fontWeight="bold" fill="#94a3b8" fontFamily="monospace">{min}</text>
+      <text x={cx + r + 4} y={cy + 6} textAnchor="middle" fontSize="12" fontWeight="bold" fill="#94a3b8" fontFamily="monospace">{max}</text>
 
       {/* needle */}
       <line x1={cx} y1={cy} x2={tip.x} y2={tip.y} stroke="#e2e8f0" strokeWidth="2.5" strokeLinecap="round" />
@@ -77,7 +77,7 @@ export const PressureGauge: React.FC<PressureGaugeProps> = ({ value, min = 990, 
       <text x={cx} y={cy + 30} textAnchor="middle" fontSize="32" fontWeight="900" fill="#ffffff" fontFamily="monospace">
         {Math.round(value)}
       </text>
-      <text x={cx} y={cy + 44} textAnchor="middle" fontSize="9" fill="#94a3b8" fontFamily="monospace">hPa</text>
+      <text x={cx} y={cy + 44} textAnchor="middle" fontSize="12" fontWeight="bold" fill="#cbd5e1" fontFamily="monospace">hPa</text>
       <text x={cx} y={cy + 58} textAnchor="middle" fontSize="13" fontWeight="bold" fill={trendColor} fontFamily="monospace">
         {trendArrow} {trend}
       </text>
@@ -110,10 +110,10 @@ export const CompassRose: React.FC<CompassRoseProps> = ({ degrees, speedLabel, c
         const p2 = polarToCartesian(cx, cy, r - (isCardinal ? 10 : 5), t);
         return <line key={i} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke={isCardinal ? '#64748b' : '#334155'} strokeWidth={isCardinal ? 1.5 : 1} />;
       })}
-      <text x={cx} y={cy - r + 20} textAnchor="middle" fontSize="11" fontWeight="bold" fill="#94a3b8" fontFamily="monospace">N</text>
-      <text x={cx} y={cy + r - 10} textAnchor="middle" fontSize="11" fontWeight="bold" fill="#94a3b8" fontFamily="monospace">S</text>
-      <text x={cx - r + 12} y={cy + 4} textAnchor="middle" fontSize="11" fontWeight="bold" fill="#94a3b8" fontFamily="monospace">O</text>
-      <text x={cx + r - 12} y={cy + 4} textAnchor="middle" fontSize="11" fontWeight="bold" fill="#94a3b8" fontFamily="monospace">E</text>
+      <text x={cx} y={cy - r + 20} textAnchor="middle" fontSize="14" fontWeight="900" fill="#cbd5e1" fontFamily="monospace">N</text>
+      <text x={cx} y={cy + r - 10} textAnchor="middle" fontSize="14" fontWeight="900" fill="#cbd5e1" fontFamily="monospace">S</text>
+      <text x={cx - r + 12} y={cy + 4} textAnchor="middle" fontSize="14" fontWeight="900" fill="#cbd5e1" fontFamily="monospace">O</text>
+      <text x={cx + r - 12} y={cy + 4} textAnchor="middle" fontSize="14" fontWeight="900" fill="#cbd5e1" fontFamily="monospace">E</text>
 
       {/* direction needle */}
       <line x1={tail.x} y1={tail.y} x2={tip.x} y2={tip.y} stroke={color} strokeWidth="6" strokeLinecap="round" className="transition-all duration-700" />
@@ -189,7 +189,7 @@ export const UVWheel: React.FC<UVWheelProps> = ({ value }) => {
       <text x={cx} y={cy - 6} textAnchor="middle" fontSize="38" fontWeight="900" fill="#ffffff" fontFamily="monospace">
         {value}
       </text>
-      <text x={cx} y={cy + 14} textAnchor="middle" fontSize="10" fill="#94a3b8" fontFamily="monospace">índice UV</text>
+      <text x={cx} y={cy + 14} textAnchor="middle" fontSize="13" fontWeight="bold" fill="#cbd5e1" fontFamily="monospace">índice UV</text>
       <text x={cx} y={cy + 34} textAnchor="middle" fontSize="14" fontWeight="bold" fill={currentZone.color} fontFamily="monospace" textTransform="uppercase">
         {currentZone.label.toUpperCase()}
       </text>
@@ -266,10 +266,10 @@ export const DualTempGauge: React.FC<DualTempGaugeProps> = ({ airC, waterC, airL
 
       <circle cx={cx} cy={cy} r={r - 30} fill="none" stroke="#0f172a" strokeWidth="0" />
 
-      <text x={cx - 44} y={cy - 40} textAnchor="middle" fontSize="10" fontWeight="bold" fill="#fbbf24" fontFamily="monospace">AIRE</text>
+      <text x={cx - 44} y={cy - 40} textAnchor="middle" fontSize="13" fontWeight="900" fill="#fbbf24" fontFamily="monospace">AIRE</text>
       <text x={cx - 44} y={cy - 22} textAnchor="middle" fontSize="26" fontWeight="900" fill="#fde68a" fontFamily="monospace">{airLabel}</text>
 
-      <text x={cx + 44} y={cy - 40} textAnchor="middle" fontSize="10" fontWeight="bold" fill="#22d3ee" fontFamily="monospace">AGUA</text>
+      <text x={cx + 44} y={cy - 40} textAnchor="middle" fontSize="13" fontWeight="900" fill="#22d3ee" fontFamily="monospace">AGUA</text>
       <text x={cx + 44} y={cy - 22} textAnchor="middle" fontSize="26" fontWeight="900" fill="#a5f3fc" fontFamily="monospace">{waterLabel}</text>
 
       {/* Water arc: right half, cyan - drawn as separate semicircle by mirroring */}
