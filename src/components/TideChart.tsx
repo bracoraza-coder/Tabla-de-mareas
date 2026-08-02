@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -25,6 +25,14 @@ export const TideChart: React.FC<TideChartProps> = ({
   units,
 }) => {
   const [hoursRange, setHoursRange] = useState<24 | 48>(24);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const formatHeight = (meters: number) => {
     if (units.height === 'ft') {
@@ -284,18 +292,27 @@ export const TideChart: React.FC<TideChartProps> = ({
       </div>
 
       {/* Main Recharts Area Chart */}
-      <div className="w-full h-[26rem] sm:h-80 bg-slate-950 rounded-xl p-1 sm:p-4 border border-slate-800 relative">
+      <div className="w-full h-[24rem] sm:h-80 bg-slate-950 rounded-xl p-0.5 sm:p-4 border border-slate-800 relative">
         
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={chartData}
-            margin={{ top: 56, right: 44, left: -2, bottom: 26 }}
+            margin={isMobile ? { top: 50, right: 28, left: -18, bottom: 22 } : { top: 56, right: 44, left: -2, bottom: 26 }}
           >
             <defs>
               <linearGradient id="tideGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.6} />
-                <stop offset="95%" stopColor="#1e3a8a" stopOpacity={0.05} />
+                <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.95} />
+                <stop offset="18%" stopColor="#3b82f6" stopOpacity={0.75} />
+                <stop offset="55%" stopColor="#1d4ed8" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="#1e3a8a" stopOpacity={0.06} />
               </linearGradient>
+              <linearGradient id="tideStroke" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#93c5fd" />
+                <stop offset="100%" stopColor="#3b82f6" />
+              </linearGradient>
+              <filter id="tideDepth" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#000000" floodOpacity="0.45" />
+              </filter>
             </defs>
 
             <CartesianGrid strokeDasharray="4 4" stroke="#1e293b" vertical={false} />
@@ -303,18 +320,22 @@ export const TideChart: React.FC<TideChartProps> = ({
             <XAxis
               dataKey="time"
               stroke="#64748b"
-              fontSize={11}
+              fontSize={isMobile ? 10 : 11}
               tickLine={false}
-              interval={3}
-              padding={{ left: 22, right: 22 }}
+              interval={isMobile ? 5 : 3}
+              padding={{ left: isMobile ? 16 : 22, right: isMobile ? 16 : 22 }}
+              angle={isMobile ? -35 : 0}
+              textAnchor={isMobile ? 'end' : 'middle'}
+              height={isMobile ? 34 : 24}
             />
 
             <YAxis
               stroke="#64748b"
-              fontSize={11}
+              fontSize={isMobile ? 10 : 11}
               tickLine={false}
               unit={` ${heightUnitLabel}`}
               domain={yAxisDomain}
+              width={isMobile ? 44 : 60}
             />
 
             <Tooltip content={<CustomTooltip />} />
@@ -332,12 +353,13 @@ export const TideChart: React.FC<TideChartProps> = ({
             <Area
               type="monotone"
               dataKey="height"
-              stroke="#3b82f6"
-              strokeWidth={3}
+              stroke="url(#tideStroke)"
+              strokeWidth={isMobile ? 3.5 : 3}
               fillOpacity={1}
               fill="url(#tideGradient)"
+              style={{ filter: 'url(#tideDepth)' }}
               dot={renderCustomDot}
-              activeDot={{ r: 6, fill: '#60a5fa', stroke: '#ffffff', strokeWidth: 2 }}
+              activeDot={{ r: 7, fill: '#60a5fa', stroke: '#ffffff', strokeWidth: 2 }}
             />
           </AreaChart>
         </ResponsiveContainer>
