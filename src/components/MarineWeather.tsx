@@ -153,7 +153,7 @@ export const MarineWeather: React.FC<MarineWeatherProps> = ({
             </span>
           </div>
 
-          <div className="w-44 h-32 mx-auto -my-1">
+          <div className="w-48 h-52 mx-auto">
             <DualTempGauge
               airC={weather.temp}
               waterC={weather.waterTemp}

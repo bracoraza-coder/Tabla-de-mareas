@@ -251,32 +251,26 @@ interface DualTempGaugeProps {
 }
 
 export const DualTempGauge: React.FC<DualTempGaugeProps> = ({ airC, waterC, airLabel, waterLabel }) => {
-  const cx = 100, cy = 100, r = 78;
-  // Map both temps onto a shared 0-40C scale split across a semicircle each side
   const scaleMin = 5, scaleMax = 38;
   const clamp = (v: number) => Math.max(scaleMin, Math.min(scaleMax, v));
   const airPct = (clamp(airC) - scaleMin) / (scaleMax - scaleMin);
   const waterPct = (clamp(waterC) - scaleMin) / (scaleMax - scaleMin);
 
+  const barTop = 56, barBottom = 176, barH = barBottom - barTop;
+
   return (
-    <svg viewBox="0 0 200 150" className="w-full h-auto">
-      {/* Air arc: left half, amber */}
-      <path d={describeArc(cx, cy, r, -180, 0)} fill="none" stroke="#1e293b" strokeWidth="20" />
-      <path d={describeArc(cx, cy, r, -180, -180 + airPct * 180)} fill="none" stroke="#fbbf24" strokeWidth="20" strokeLinecap="round" />
+    <svg viewBox="0 0 200 210" className="w-full h-auto">
+      {/* AIRE bar */}
+      <text x="55" y="26" textAnchor="middle" fontSize="14" fontWeight="900" fill="#fbbf24" fontFamily="monospace">AIRE</text>
+      <rect x="35" y={barTop} width="40" height={barH} rx="20" fill="#1e293b" />
+      <rect x="35" y={barTop + barH * (1 - airPct)} width="40" height={barH * airPct} rx="20" fill="#fbbf24" />
+      <text x="55" y={barBottom + 30} textAnchor="middle" fontSize="24" fontWeight="900" fill="#fde68a" fontFamily="monospace">{airLabel}</text>
 
-      <circle cx={cx} cy={cy} r={r - 30} fill="none" stroke="#0f172a" strokeWidth="0" />
-
-      <text x={cx - 44} y={cy - 40} textAnchor="middle" fontSize="13" fontWeight="900" fill="#fbbf24" fontFamily="monospace">AIRE</text>
-      <text x={cx - 44} y={cy - 22} textAnchor="middle" fontSize="26" fontWeight="900" fill="#fde68a" fontFamily="monospace">{airLabel}</text>
-
-      <text x={cx + 44} y={cy - 40} textAnchor="middle" fontSize="13" fontWeight="900" fill="#22d3ee" fontFamily="monospace">AGUA</text>
-      <text x={cx + 44} y={cy - 22} textAnchor="middle" fontSize="26" fontWeight="900" fill="#a5f3fc" fontFamily="monospace">{waterLabel}</text>
-
-      {/* Water arc: right half, cyan - drawn as separate semicircle by mirroring */}
-      <g transform={`translate(${2 * cx}, 0) scale(-1, 1)`}>
-        <path d={describeArc(cx, cy, r, -180, 0)} fill="none" stroke="#1e293b" strokeWidth="20" />
-        <path d={describeArc(cx, cy, r, -180, -180 + waterPct * 180)} fill="none" stroke="#22d3ee" strokeWidth="20" strokeLinecap="round" />
-      </g>
+      {/* AGUA bar */}
+      <text x="145" y="26" textAnchor="middle" fontSize="14" fontWeight="900" fill="#22d3ee" fontFamily="monospace">AGUA</text>
+      <rect x="125" y={barTop} width="40" height={barH} rx="20" fill="#1e293b" />
+      <rect x="125" y={barTop + barH * (1 - waterPct)} width="40" height={barH * waterPct} rx="20" fill="#22d3ee" />
+      <text x="145" y={barBottom + 30} textAnchor="middle" fontSize="24" fontWeight="900" fill="#a5f3fc" fontFamily="monospace">{waterLabel}</text>
     </svg>
   );
 };

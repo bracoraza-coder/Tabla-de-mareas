@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { SolunarData } from '../types';
 import { FishingDiagram } from './gauges/FishingDiagram';
+import { ActivityWaveChart } from './gauges/ActivityWaveChart';
 import { MoonPhaseDisc } from './gauges/WeatherGauges';
 
 interface SolunarSectionProps {
@@ -99,6 +100,12 @@ export const SolunarSection: React.FC<SolunarSectionProps> = ({
       {/* Fish-o-meter: instant visual read of how good fishing is today */}
       <div className="w-full h-56 sm:h-64 rounded-xl overflow-hidden border border-slate-800">
         <FishingDiagram activityScore={activityScore} label={activityLabel} />
+      </div>
+
+      {/* Curva de actividad del día, con los periodos mayores/menores marcados */}
+      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 sm:p-4">
+        <div className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Curva de Actividad del Día</div>
+        <ActivityWaveChart majorPeriods={majorPeriods} minorPeriods={minorPeriods} />
       </div>
 
       {/* Major & Minor Fishing Periods */}
