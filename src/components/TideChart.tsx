@@ -284,7 +284,7 @@ export const TideChart: React.FC<TideChartProps> = ({
       </div>
 
       {/* Main Recharts Area Chart */}
-      <div className="w-full h-72 sm:h-80 bg-slate-950 rounded-xl p-2 sm:p-4 border border-slate-800 relative">
+      <div className="w-full h-[26rem] sm:h-80 bg-slate-950 rounded-xl p-1 sm:p-4 border border-slate-800 relative">
         
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart

@@ -92,7 +92,7 @@ export const MarineWeather: React.FC<MarineWeatherProps> = ({
           </div>
 
           <div className="flex items-center gap-3 my-1">
-            <div className="w-28 h-28 shrink-0">
+            <div className="w-36 h-36 sm:w-28 sm:h-28 shrink-0">
               <CompassRose degrees={weather.windDegrees} speedLabel={formatSpeed(weather.windSpeedKnots)} />
             </div>
             <div className="flex-1 min-w-0">
@@ -174,10 +174,10 @@ export const MarineWeather: React.FC<MarineWeatherProps> = ({
       </div>
 
       {/* Secondary Weather Metrics Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 sm:gap-3 text-xs">
         <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col items-center">
           <div className="text-slate-400 font-bold uppercase text-[10px] mb-1 self-start">Presión Barométrica</div>
-          <div className="w-32">
+          <div className="w-full max-w-[220px] mx-auto sm:w-32 sm:max-w-none">
             <PressureGauge value={weather.pressureHpa} trend={weather.pressureTrend} />
           </div>
         </div>
@@ -194,7 +194,7 @@ export const MarineWeather: React.FC<MarineWeatherProps> = ({
 
         <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col items-center">
           <div className="text-slate-400 font-bold uppercase text-[10px] mb-1 self-start">Radiación UV</div>
-          <div className="w-32">
+          <div className="w-full max-w-[220px] mx-auto sm:w-32 sm:max-w-none">
             <UVWheel value={weather.uvIndex} />
           </div>
         </div>

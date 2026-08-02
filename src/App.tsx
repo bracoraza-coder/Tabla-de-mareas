@@ -376,7 +376,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500 selection:text-slate-950 flex flex-col justify-between antialiased relative">
+    <div className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500 selection:text-slate-950 flex flex-col justify-between antialiased relative">
       
       {/* Floating Refresh Toast Banner */}
       {refreshToast && (
@@ -409,7 +409,7 @@ export default function App() {
       <QuickNav active={activeTab} onChange={setActiveTab} />
 
       {/* Main Container Content */}
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-6 flex-1 w-full">
+      <main className="max-w-5xl mx-auto px-2 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 flex-1 w-full">
 
         {/* Real-time Water Height Live Gauge & Next Tide Countdown - always visible summary */}
         <div id="current-tide-gauge" className="scroll-mt-24">
