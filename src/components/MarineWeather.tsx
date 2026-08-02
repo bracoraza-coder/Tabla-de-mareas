@@ -125,7 +125,7 @@ export const MarineWeather: React.FC<MarineWeatherProps> = ({
 
           <div className="my-2">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black text-white font-mono">
+              <span className="text-4xl font-black text-white font-mono">
                 {formatHeight(waveHeightInUnits(weather.waveHeightMeters, units))}
               </span>
               <span className="text-xs text-slate-400 font-mono">altura de ola</span>

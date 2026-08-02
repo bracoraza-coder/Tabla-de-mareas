@@ -14,7 +14,9 @@ import {
   Map,
   Bell,
   BellRing,
-  RefreshCw
+  RefreshCw,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { Port, UserUnits, NotificationSettings } from '../types';
 import { PORTS_DATABASE } from '../data/portsData';
@@ -35,6 +37,8 @@ interface HeaderProps {
   onOpenNotificationsModal: () => void;
   onRefresh: () => void;
   isRefreshing?: boolean;
+  theme: 'dark' | 'light';
+  onToggleTheme: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -51,6 +55,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNotificationsModal,
   onRefresh,
   isRefreshing = false,
+  theme,
+  onToggleTheme,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -136,6 +142,20 @@ export const Header: React.FC<HeaderProps> = ({
             <Globe className="w-3.5 h-3.5 text-blue-400" />
             <span>Español</span>
           </div>
+          <span className="text-slate-700">|</span>
+          <button
+            onClick={onToggleTheme}
+            className="flex items-center gap-1.5 hover:text-amber-400 transition-colors cursor-pointer font-medium"
+            id="theme-toggle-btn"
+            title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-3.5 h-3.5 text-amber-400" />
+            ) : (
+              <Moon className="w-3.5 h-3.5 text-blue-400" />
+            )}
+            <span>{theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}</span>
+          </button>
         </div>
       </div>
 

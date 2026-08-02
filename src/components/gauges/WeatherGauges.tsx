@@ -45,15 +45,25 @@ export const PressureGauge: React.FC<PressureGaugeProps> = ({ value, min = 990, 
 
   return (
     <svg viewBox="0 0 200 130" className="w-full h-auto">
+      <defs>
+        <filter id="gaugeGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2.2" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
       {zones.map((z, i) => (
         <path
           key={i}
           d={describeArc(cx, cy, r, -90 + z.from * 180, -90 + z.to * 180)}
           fill="none"
           stroke={z.color}
-          strokeWidth="12"
+          strokeWidth="22"
           strokeLinecap="butt"
-          opacity="0.9"
+          opacity="1"
+          filter="url(#gaugeGlow)"
         />
       ))}
       {/* tick labels */}
@@ -64,11 +74,11 @@ export const PressureGauge: React.FC<PressureGaugeProps> = ({ value, min = 990, 
       <line x1={cx} y1={cy} x2={tip.x} y2={tip.y} stroke="#e2e8f0" strokeWidth="2.5" strokeLinecap="round" />
       <circle cx={cx} cy={cy} r="5" fill="#e2e8f0" />
 
-      <text x={cx} y={cy + 30} textAnchor="middle" fontSize="24" fontWeight="900" fill="#ffffff" fontFamily="monospace">
+      <text x={cx} y={cy + 30} textAnchor="middle" fontSize="32" fontWeight="900" fill="#ffffff" fontFamily="monospace">
         {Math.round(value)}
       </text>
       <text x={cx} y={cy + 44} textAnchor="middle" fontSize="9" fill="#94a3b8" fontFamily="monospace">hPa</text>
-      <text x={cx} y={cy + 58} textAnchor="middle" fontSize="11" fontWeight="bold" fill={trendColor} fontFamily="monospace">
+      <text x={cx} y={cy + 58} textAnchor="middle" fontSize="13" fontWeight="bold" fill={trendColor} fontFamily="monospace">
         {trendArrow} {trend}
       </text>
     </svg>
@@ -106,7 +116,7 @@ export const CompassRose: React.FC<CompassRoseProps> = ({ degrees, speedLabel, c
       <text x={cx + r - 12} y={cy + 4} textAnchor="middle" fontSize="11" fontWeight="bold" fill="#94a3b8" fontFamily="monospace">E</text>
 
       {/* direction needle */}
-      <line x1={tail.x} y1={tail.y} x2={tip.x} y2={tip.y} stroke={color} strokeWidth="4" strokeLinecap="round" className="transition-all duration-700" />
+      <line x1={tail.x} y1={tail.y} x2={tip.x} y2={tip.y} stroke={color} strokeWidth="6" strokeLinecap="round" className="transition-all duration-700" />
       <polygon
         points={`${tip.x},${tip.y - 1} ${tip.x - 6},${tip.y + 10} ${tip.x + 6},${tip.y + 10}`}
         fill={color}
@@ -116,7 +126,7 @@ export const CompassRose: React.FC<CompassRoseProps> = ({ degrees, speedLabel, c
 
       <text x={cx} y={cy + 6} textAnchor="middle" fontSize="10" fontWeight="900" fill="#e2e8f0" fontFamily="monospace" dy="26">
       </text>
-      <text x={cx} y={cy + r + 22} textAnchor="middle" fontSize="15" fontWeight="900" fill="#ffffff" fontFamily="monospace">
+      <text x={cx} y={cy + r + 22} textAnchor="middle" fontSize="20" fontWeight="900" fill="#ffffff" fontFamily="monospace">
         {speedLabel}
       </text>
     </svg>
@@ -153,24 +163,34 @@ export const UVWheel: React.FC<UVWheelProps> = ({ value }) => {
 
   return (
     <svg viewBox="0 0 200 190" className="w-full h-auto">
+      <defs>
+        <filter id="gaugeGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2.2" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
       {zones.map((z, i) => (
         <path
           key={i}
           d={describeArc(cx, cy, r, toAngle(z.from), toAngle(z.to))}
           fill="none"
           stroke={z.color}
-          strokeWidth="14"
-          opacity="0.92"
+          strokeWidth="20"
+          opacity="1"
+          filter="url(#gaugeGlow)"
         />
       ))}
       <line x1={cx} y1={cy} x2={pTip.x} y2={pTip.y} stroke="#e2e8f0" strokeWidth="2.5" strokeLinecap="round" />
       <circle cx={cx} cy={cy} r="5" fill="#e2e8f0" />
 
-      <text x={cx} y={cy - 6} textAnchor="middle" fontSize="30" fontWeight="900" fill="#ffffff" fontFamily="monospace">
+      <text x={cx} y={cy - 6} textAnchor="middle" fontSize="38" fontWeight="900" fill="#ffffff" fontFamily="monospace">
         {value}
       </text>
       <text x={cx} y={cy + 14} textAnchor="middle" fontSize="10" fill="#94a3b8" fontFamily="monospace">índice UV</text>
-      <text x={cx} y={cy + 34} textAnchor="middle" fontSize="12" fontWeight="bold" fill={currentZone.color} fontFamily="monospace" textTransform="uppercase">
+      <text x={cx} y={cy + 34} textAnchor="middle" fontSize="14" fontWeight="bold" fill={currentZone.color} fontFamily="monospace" textTransform="uppercase">
         {currentZone.label.toUpperCase()}
       </text>
     </svg>
@@ -241,21 +261,21 @@ export const DualTempGauge: React.FC<DualTempGaugeProps> = ({ airC, waterC, airL
   return (
     <svg viewBox="0 0 200 150" className="w-full h-auto">
       {/* Air arc: left half, amber */}
-      <path d={describeArc(cx, cy, r, -180, 0)} fill="none" stroke="#1e293b" strokeWidth="14" />
-      <path d={describeArc(cx, cy, r, -180, -180 + airPct * 180)} fill="none" stroke="#fbbf24" strokeWidth="14" strokeLinecap="round" />
+      <path d={describeArc(cx, cy, r, -180, 0)} fill="none" stroke="#1e293b" strokeWidth="20" />
+      <path d={describeArc(cx, cy, r, -180, -180 + airPct * 180)} fill="none" stroke="#fbbf24" strokeWidth="20" strokeLinecap="round" />
 
       <circle cx={cx} cy={cy} r={r - 30} fill="none" stroke="#0f172a" strokeWidth="0" />
 
       <text x={cx - 44} y={cy - 40} textAnchor="middle" fontSize="10" fontWeight="bold" fill="#fbbf24" fontFamily="monospace">AIRE</text>
-      <text x={cx - 44} y={cy - 22} textAnchor="middle" fontSize="20" fontWeight="900" fill="#fde68a" fontFamily="monospace">{airLabel}</text>
+      <text x={cx - 44} y={cy - 22} textAnchor="middle" fontSize="26" fontWeight="900" fill="#fde68a" fontFamily="monospace">{airLabel}</text>
 
       <text x={cx + 44} y={cy - 40} textAnchor="middle" fontSize="10" fontWeight="bold" fill="#22d3ee" fontFamily="monospace">AGUA</text>
-      <text x={cx + 44} y={cy - 22} textAnchor="middle" fontSize="20" fontWeight="900" fill="#a5f3fc" fontFamily="monospace">{waterLabel}</text>
+      <text x={cx + 44} y={cy - 22} textAnchor="middle" fontSize="26" fontWeight="900" fill="#a5f3fc" fontFamily="monospace">{waterLabel}</text>
 
       {/* Water arc: right half, cyan - drawn as separate semicircle by mirroring */}
       <g transform={`translate(${2 * cx}, 0) scale(-1, 1)`}>
-        <path d={describeArc(cx, cy, r, -180, 0)} fill="none" stroke="#1e293b" strokeWidth="14" />
-        <path d={describeArc(cx, cy, r, -180, -180 + waterPct * 180)} fill="none" stroke="#22d3ee" strokeWidth="14" strokeLinecap="round" />
+        <path d={describeArc(cx, cy, r, -180, 0)} fill="none" stroke="#1e293b" strokeWidth="20" />
+        <path d={describeArc(cx, cy, r, -180, -180 + waterPct * 180)} fill="none" stroke="#22d3ee" strokeWidth="20" strokeLinecap="round" />
       </g>
     </svg>
   );

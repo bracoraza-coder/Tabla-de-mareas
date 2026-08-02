@@ -25,6 +25,28 @@ import { getPortFromLocation, syncUrlToPort, updateHeadForPort } from './utils/r
 import { formatZonedHHMM, getZonedParts } from './utils/timezoneHelpers';
 
 export default function App() {
+  // Theme (dark/light) - remembers the visitor's choice, defaulting to
+  // their system preference the very first time they visit.
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    try {
+      const saved = localStorage.getItem('mareas_theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+    } catch { /* ignore */ }
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: light)').matches) {
+      return 'light';
+    }
+    return 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('light', theme === 'light');
+    try {
+      localStorage.setItem('mareas_theme', theme);
+    } catch { /* ignore */ }
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(t => (t === 'dark' ? 'light' : 'dark'));
+
   // Active Port - initialised from the URL (e.g. /mareas/cadiz) when present,
   // so every port has its own shareable, indexable address.
   const [selectedPort, setSelectedPortState] = useState<Port>(
@@ -377,6 +399,8 @@ export default function App() {
         onOpenNotificationsModal={() => setIsNotificationsModalOpen(true)}
         onRefresh={handleRefresh}
         isRefreshing={isRefreshing}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       {/* Quick-jump navigation: lets any visitor go straight to the section

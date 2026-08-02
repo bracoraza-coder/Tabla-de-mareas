@@ -128,7 +128,7 @@ export const CurrentTideGauge: React.FC<CurrentTideGaugeProps> = ({
               </div>
               
               <div className="flex items-baseline gap-2">
-                <span className="text-5xl font-extrabold tracking-tight text-white font-mono">
+                <span className="text-6xl font-extrabold tracking-tight text-white font-mono">
                   {formatHeight(currentWaterHeight)}
                 </span>
                 <span className="text-xs text-slate-400 font-mono">cero hidrográfico</span>

@@ -73,7 +73,7 @@ export const SurfSection: React.FC<SurfSectionProps> = ({ weather, dayData, port
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={`text-2xl font-black font-mono ${style.text}`}>{surf.score.toFixed(1)}</span>
+              <span className={`text-3xl font-black font-mono ${style.text}`}>{surf.score.toFixed(1)}</span>
               <span className="text-[10px] text-slate-400 font-mono">/ 10</span>
             </div>
           </div>
@@ -92,11 +92,11 @@ export const SurfSection: React.FC<SurfSectionProps> = ({ weather, dayData, port
 
           <div className="grid grid-cols-3 gap-3 text-center">
             <div>
-              <div className="text-2xl font-black text-white font-mono">{formatHeight(weather.swellHeightMeters)}</div>
+              <div className="text-3xl font-black text-white font-mono">{formatHeight(weather.swellHeightMeters)}</div>
               <div className="text-[10px] text-slate-400 uppercase font-mono flex items-center justify-center gap-1"><Ruler className="w-3 h-3" />Altura</div>
             </div>
             <div>
-              <div className="text-2xl font-black text-blue-300 font-mono">{weather.swellPeriodSeconds}s</div>
+              <div className="text-3xl font-black text-blue-300 font-mono">{weather.swellPeriodSeconds}s</div>
               <div className="text-[10px] text-slate-400 uppercase font-mono flex items-center justify-center gap-1"><Timer className="w-3 h-3" />Periodo</div>
             </div>
             <div className="flex flex-col items-center">
