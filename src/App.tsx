@@ -47,6 +47,8 @@ export default function App() {
 
   const toggleTheme = () => setTheme(t => (t === 'dark' ? 'light' : 'dark'));
 
+  const [activeTab, setActiveTab] = useState<'grafico' | 'surf' | 'pesca' | 'meteo' | 'calendario'>('grafico');
+
   // Active Port - initialised from the URL (e.g. /mareas/cadiz) when present,
   // so every port has its own shareable, indexable address.
   const [selectedPort, setSelectedPortState] = useState<Port>(
@@ -403,14 +405,13 @@ export default function App() {
         onToggleTheme={toggleTheme}
       />
 
-      {/* Quick-jump navigation: lets any visitor go straight to the section
-          they care about the moment the page opens */}
-      <QuickNav />
+      {/* Section tabs: only the selected section is shown, large and centered */}
+      <QuickNav active={activeTab} onChange={setActiveTab} />
 
       {/* Main Container Content */}
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6 flex-1 w-full">
+      <main className="max-w-5xl mx-auto px-4 py-6 space-y-6 flex-1 w-full">
 
-        {/* Real-time Water Height Live Gauge & Next Tide Countdown */}
+        {/* Real-time Water Height Live Gauge & Next Tide Countdown - always visible summary */}
         <div id="current-tide-gauge" className="scroll-mt-24">
           <CurrentTideGauge
             dayData={dayData}
@@ -420,54 +421,28 @@ export default function App() {
           />
         </div>
 
-        {/* Interactive Tide Curve Recharts Graph */}
-        <TideChart
-          dayData={dayData}
-          port={selectedPort}
-          units={units}
-        />
+        {activeTab === 'grafico' && (
+          <TideChart dayData={dayData} port={selectedPort} units={units} />
+        )}
 
-        {/* Surf & Wave Forecast - flagship section for surfers */}
-        <SurfSection
-          weather={dayData.weather}
-          dayData={dayData}
-          port={selectedPort}
-          units={units}
-        />
+        {activeTab === 'surf' && (
+          <SurfSection weather={dayData.weather} dayData={dayData} port={selectedPort} units={units} />
+        )}
 
-        {/* Solunar Calendar & Fishing Activity Index */}
-        <div id="solunar-section" className="scroll-mt-24">
-          <SolunarSection
-            solunar={dayData.solunar}
-            dateStr={dayData.dateStr}
-          />
-        </div>
+        {activeTab === 'pesca' && (
+          <>
+            <SolunarSection solunar={dayData.solunar} dateStr={dayData.dateStr} />
+            <AiAssistant port={selectedPort} dayData={dayData} units={units} />
+          </>
+        )}
 
-        {/* Real-time Marine Weather, Wind Compass & Swell */}
-        <div id="weather-section" className="scroll-mt-24">
-          <MarineWeather
-            weather={dayData.weather}
-            units={units}
-            isUpdating={isWeatherUpdating}
-          />
-        </div>
+        {activeTab === 'meteo' && (
+          <MarineWeather weather={dayData.weather} units={units} isUpdating={isWeatherUpdating} />
+        )}
 
-        {/* Marine & Fishing Technical Station Report */}
-        <AiAssistant
-          port={selectedPort}
-          dayData={dayData}
-          units={units}
-        />
-
-        {/* Monthly Tide Calendar Table */}
-        <div id="monthly-table-section" className="scroll-mt-24">
-          <MonthlyTable
-            port={selectedPort}
-            units={units}
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-          />
-        </div>
+        {activeTab === 'calendario' && (
+          <MonthlyTable port={selectedPort} units={units} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+        )}
 
       </main>
 
