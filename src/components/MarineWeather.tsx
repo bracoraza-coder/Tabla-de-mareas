@@ -1,19 +1,14 @@
 import React from 'react';
 import { 
   Wind, 
-  Thermometer, 
   Waves, 
   Eye, 
   Droplets, 
-  Gauge, 
-  Sun, 
   CloudRain, 
-  Compass, 
-  ArrowUp,
-  ShieldAlert,
   ThermometerSnowflake
 } from 'lucide-react';
 import { MarineWeather as MarineWeatherType, UserUnits } from '../types';
+import { PressureGauge, CompassRose, UVWheel, DualTempGauge } from './gauges/WeatherGauges';
 
 interface MarineWeatherProps {
   weather: MarineWeatherType;
@@ -96,26 +91,18 @@ export const MarineWeather: React.FC<MarineWeatherProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center justify-between my-2">
-            <div>
-              <div className="text-3xl font-black text-white font-mono">
+          <div className="flex items-center gap-3 my-1">
+            <div className="w-28 h-28 shrink-0">
+              <CompassRose degrees={weather.windDegrees} speedLabel={formatSpeed(weather.windSpeedKnots)} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-2xl font-black text-white font-mono leading-tight">
                 {formatSpeed(weather.windSpeedKnots)}
               </div>
               <div className="text-xs text-slate-400 mt-1">
                 Rachas hasta <strong className="text-cyan-300 font-mono">{formatSpeed(weather.windGustKnots)}</strong>
               </div>
-            </div>
-
-            {/* Compass Rose Indicator */}
-            <div className="relative w-16 h-16 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center shrink-0">
-              <span className="absolute top-1 text-[9px] font-bold text-slate-500">N</span>
-              <span className="absolute bottom-1 text-[9px] font-bold text-slate-500">S</span>
-              <div
-                className="transition-transform duration-700"
-                style={{ transform: `rotate(${weather.windDegrees}deg)` }}
-              >
-                <ArrowUp className="w-7 h-7 text-cyan-400 fill-cyan-400" />
-              </div>
+              <div className="text-[11px] text-slate-500 mt-1">Procede de {weather.windDirection} ({weather.windDegrees}°)</div>
             </div>
           </div>
 
@@ -166,24 +153,16 @@ export const MarineWeather: React.FC<MarineWeatherProps> = ({
             </span>
           </div>
 
-          <div className="my-2 flex items-center justify-between">
-            <div>
-              <div className="text-3xl font-black text-emerald-300 font-mono">
-                {formatTemp(weather.waterTemp)}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">
-                Temperatura de la costa
-              </div>
-            </div>
-
-            <div className="text-right border-l border-slate-800 pl-4">
-              <div className="text-lg font-bold text-white font-mono">
-                {formatTemp(weather.temp)}
-              </div>
-              <div className="text-[11px] text-slate-400">
-                Aire (Sensación {formatTemp(weather.feelsLike)})
-              </div>
-            </div>
+          <div className="w-32 h-24 mx-auto -my-1">
+            <DualTempGauge
+              airC={weather.temp}
+              waterC={weather.waterTemp}
+              airLabel={formatTemp(weather.temp)}
+              waterLabel={formatTemp(weather.waterTemp)}
+            />
+          </div>
+          <div className="text-[11px] text-slate-400 text-center -mt-2">
+            Sensación térmica {formatTemp(weather.feelsLike)}
           </div>
 
           <div className="text-[11px] text-slate-400 border-t border-slate-800 pt-2 flex items-center justify-between">
@@ -196,13 +175,10 @@ export const MarineWeather: React.FC<MarineWeatherProps> = ({
 
       {/* Secondary Weather Metrics Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-        <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center gap-3">
-          <Gauge className="w-5 h-5 text-cyan-400 shrink-0" />
-          <div>
-            <div className="text-slate-400 font-bold uppercase text-[10px]">Presión Barométrica</div>
-            <div className="text-sm font-bold text-white mt-0.5 font-mono">
-              {weather.pressureHpa} hPa <span className="text-xs font-normal text-slate-400">({weather.pressureTrend})</span>
-            </div>
+        <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col items-center">
+          <div className="text-slate-400 font-bold uppercase text-[10px] mb-1 self-start">Presión Barométrica</div>
+          <div className="w-32">
+            <PressureGauge value={weather.pressureHpa} trend={weather.pressureTrend} />
           </div>
         </div>
 
@@ -216,13 +192,10 @@ export const MarineWeather: React.FC<MarineWeatherProps> = ({
           </div>
         </div>
 
-        <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center gap-3">
-          <Sun className="w-5 h-5 text-amber-400 shrink-0" />
-          <div>
-            <div className="text-slate-400 font-bold uppercase text-[10px]">Radiación UV</div>
-            <div className="text-sm font-bold text-amber-300 mt-0.5 font-mono">
-              UV {weather.uvIndex} <span className="text-xs font-normal text-slate-400">(Moderado)</span>
-            </div>
+        <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col items-center">
+          <div className="text-slate-400 font-bold uppercase text-[10px] mb-1 self-start">Radiación UV</div>
+          <div className="w-32">
+            <UVWheel value={weather.uvIndex} />
           </div>
         </div>
 

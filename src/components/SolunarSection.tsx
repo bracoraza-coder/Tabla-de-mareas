@@ -13,6 +13,7 @@ import {
   Zap
 } from 'lucide-react';
 import { SolunarData } from '../types';
+import { MoonPhaseDisc } from './gauges/WeatherGauges';
 
 interface SolunarSectionProps {
   solunar: SolunarData;
@@ -185,9 +186,6 @@ export const SolunarSection: React.FC<SolunarSectionProps> = ({
               <Sun className="w-4 h-4 text-amber-400" />
               <span>Ciclo Solar</span>
             </div>
-            <span className="text-[10px] bg-amber-950 text-amber-300 px-2 py-0.5 rounded border border-amber-800 font-mono">
-              UV 8 (ALTO)
-            </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
@@ -224,7 +222,9 @@ export const SolunarSection: React.FC<SolunarSectionProps> = ({
               <Moon className="w-4 h-4 text-blue-400" />
               <span>Ciclo Lunar ({moonPhaseName})</span>
             </div>
-            <span className="text-xl">{moonPhaseIcon}</span>
+            <div className="w-9 h-9 shrink-0">
+              <MoonPhaseDisc illuminationPercent={moonIllumination} waxing={moonAgeDays < 14.765} />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">

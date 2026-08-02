@@ -109,115 +109,74 @@ export const TideChart: React.FC<TideChartProps> = ({
     if (!payload || cx == null || cy == null) return null;
 
     const isLiveNow = currentPoint && payload.time === currentPoint.time;
+    const isHighLow = !!payload.isHighLow;
 
-    // 1. Live Current Position (Green pulsing dot with time badge)
-    if (isLiveNow) {
-      const nowTimeStr = formatZonedHHMM(nowMs, port.timezone);
-      return (
-        <g key={`live-dot-${payload.time}`}>
-          <circle
-            cx={cx}
-            cy={cy}
-            r={16}
-            className="fill-emerald-400 opacity-70 animate-ping"
-          />
-          <circle
-            cx={cx}
-            cy={cy}
-            r={9}
-            className="fill-emerald-500 opacity-50 animate-pulse"
-          />
-          <circle
-            cx={cx}
-            cy={cy}
-            r={5.5}
-            fill="#22c55e"
-            stroke="#ffffff"
-            strokeWidth={2}
-          />
-          <g transform={`translate(${cx}, ${cy - 26})`}>
-            <rect
-              x="-46"
-              y="-12"
-              width="92"
-              height="21"
-              rx="5"
-              fill="#022c22"
-              stroke="#10b981"
-              strokeWidth="1.5"
-              className="shadow-2xl"
-            />
-            <text
-              x="0"
-              y="2"
-              textAnchor="middle"
-              fill="#34d399"
-              fontSize="10"
-              fontWeight="bold"
-              fontFamily="monospace"
-            >
-              AHORA {nowTimeStr}h
-            </text>
+    if (!isLiveNow && !isHighLow) return null;
+
+    const nowTimeStr = formatZonedHHMM(nowMs, port.timezone);
+
+    // When "now" happens to land on (or very near) an actual high/low tide
+    // point - which happens often, since a real tide event is exactly the
+    // kind of moment people check - both badges need to render. Otherwise
+    // the live marker silently swallows the tide time label underneath it.
+    const liveBadgeYOffset = isHighLow ? -46 : -26;
+
+    return (
+      <g key={`dot-${payload.time}`}>
+        {isLiveNow && (
+          <g>
+            <circle cx={cx} cy={cy} r={16} className="fill-emerald-400 opacity-70 animate-ping" />
+            <circle cx={cx} cy={cy} r={9} className="fill-emerald-500 opacity-50 animate-pulse" />
+            <circle cx={cx} cy={cy} r={5.5} fill="#22c55e" stroke="#ffffff" strokeWidth={2} />
+            <g transform={`translate(${cx}, ${cy + liveBadgeYOffset})`}>
+              <rect x="-46" y="-12" width="92" height="21" rx="5" fill="#022c22" stroke="#10b981" strokeWidth="1.5" />
+              <text x="0" y="2" textAnchor="middle" fill="#34d399" fontSize="10" fontWeight="bold" fontFamily="monospace">
+                AHORA {nowTimeStr}h
+              </text>
+            </g>
           </g>
-        </g>
-      );
-    }
+        )}
 
-    // 2. High Tide (Pleamar) or Low Tide (Bajamar) Exact Markers
-    if (payload.isHighLow) {
-      const isPleamar = payload.highLowType === 'pleamar';
-      const formattedHeight = `${payload.height}${heightUnitLabel}`;
-      
-      const yOffset = isPleamar ? -20 : 20;
-      const badgeBg = isPleamar ? '#1e3a8a' : '#451a03';
-      const badgeBorder = isPleamar ? '#3b82f6' : '#f59e0b';
-      const textColor = isPleamar ? '#bfdbfe' : '#fef08a';
-      const arrowSymbol = isPleamar ? '▲' : '▼';
-      const labelText = `${arrowSymbol} ${payload.time}h (${formattedHeight})`;
+        {isHighLow && (() => {
+          const isPleamar = payload.highLowType === 'pleamar';
+          const formattedHeight = `${payload.height}${heightUnitLabel}`;
+          const baseYOffset = isPleamar ? -20 : 20;
+          const badgeBg = isPleamar ? '#1e3a8a' : '#451a03';
+          const badgeBorder = isPleamar ? '#3b82f6' : '#f59e0b';
+          const textColor = isPleamar ? '#bfdbfe' : '#fef08a';
+          const arrowSymbol = isPleamar ? '▲' : '▼';
+          const labelText = `${arrowSymbol} ${payload.time}h (${formattedHeight})`;
+          const textLen = labelText.length;
+          const badgeWidth = Math.max(70, textLen * 5.7 + 8);
+          const halfWidth = badgeWidth / 2;
 
-      const textLen = labelText.length;
-      const badgeWidth = Math.max(70, textLen * 5.7 + 8);
-      const halfWidth = badgeWidth / 2;
-
-      return (
-        <g key={`hl-dot-${payload.time}`}>
-          <circle
-            cx={cx}
-            cy={cy}
-            r={4.5}
-            fill={isPleamar ? '#3b82f6' : '#f59e0b'}
-            stroke="#ffffff"
-            strokeWidth={1.8}
-          />
-          <g transform={`translate(${cx}, ${cy + yOffset})`}>
-            <rect
-              x={-halfWidth}
-              y="-9"
-              width={badgeWidth}
-              height="18"
-              rx="4"
-              fill={badgeBg}
-              stroke={badgeBorder}
-              strokeWidth="1"
-              opacity="0.95"
-            />
-            <text
-              x="0"
-              y="3"
-              textAnchor="middle"
-              fill={textColor}
-              fontSize="9.5"
-              fontWeight="bold"
-              fontFamily="sans-serif"
-            >
-              {labelText}
-            </text>
-          </g>
-        </g>
-      );
-    }
-
-    return null;
+          if (!isLiveNow) {
+            return (
+              <>
+                <circle cx={cx} cy={cy} r={4.5} fill={isPleamar ? '#3b82f6' : '#f59e0b'} stroke="#ffffff" strokeWidth={1.8} />
+                <g transform={`translate(${cx}, ${cy + baseYOffset})`}>
+                  <rect x={-halfWidth} y="-9" width={badgeWidth} height="18" rx="4" fill={badgeBg} stroke={badgeBorder} strokeWidth="1" opacity="0.95" />
+                  <text x="0" y="3" textAnchor="middle" fill={textColor} fontSize="9.5" fontWeight="bold" fontFamily="sans-serif">
+                    {labelText}
+                  </text>
+                </g>
+              </>
+            );
+          }
+          // Both markers on the same point: push the tide badge further out
+          // (below the pulsing live dot) so it never overlaps the "AHORA" box.
+          const sharedYOffset = isPleamar ? -70 : 30;
+          return (
+            <g transform={`translate(${cx}, ${cy + sharedYOffset})`}>
+              <rect x={-halfWidth} y="-9" width={badgeWidth} height="18" rx="4" fill={badgeBg} stroke={badgeBorder} strokeWidth="1" opacity="0.95" />
+              <text x="0" y="3" textAnchor="middle" fill={textColor} fontSize="9.5" fontWeight="bold" fontFamily="sans-serif">
+                {labelText}
+              </text>
+            </g>
+          );
+        })()}
+      </g>
+    );
   };
 
   // Custom Recharts Tooltip
@@ -330,7 +289,7 @@ export const TideChart: React.FC<TideChartProps> = ({
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={chartData}
-            margin={{ top: 40, right: 44, left: -2, bottom: 26 }}
+            margin={{ top: 56, right: 44, left: -2, bottom: 26 }}
           >
             <defs>
               <linearGradient id="tideGradient" x1="0" y1="0" x2="0" y2="1">
