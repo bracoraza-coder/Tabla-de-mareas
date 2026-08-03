@@ -37,6 +37,7 @@ interface HeaderProps {
   onChangeUnits: (units: UserUnits) => void;
   onOpenMapModal: () => void;
   onOpenTideChart?: () => void;
+  onGoHome?: () => void;
   notificationSettings: NotificationSettings;
   onOpenNotificationsModal: () => void;
   onRefresh: () => void;
@@ -58,6 +59,7 @@ export const Header: React.FC<HeaderProps> = ({
   onChangeUnits,
   onOpenMapModal,
   onOpenTideChart,
+  onGoHome,
   notificationSettings,
   onOpenNotificationsModal,
   onRefresh,
@@ -173,6 +175,18 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="text-blue-400">METEO EN VIVO (OPEN-METEO)</span>
         </div>
         <div className="flex items-center gap-2.5 text-slate-300 text-[11px]">
+          {onGoHome && (
+            <>
+              <button 
+                onClick={onGoHome}
+                className="hover:text-cyan-300 text-cyan-400 flex items-center gap-1 transition-colors cursor-pointer font-bold"
+                title="Ir a la página de inicio"
+              >
+                <span>🏠 Inicio</span>
+              </button>
+              <span className="text-slate-700">|</span>
+            </>
+          )}
           <button 
             onClick={onOpenMapModal}
             className="hover:text-blue-400 flex items-center gap-1 transition-colors cursor-pointer font-medium"
@@ -214,9 +228,9 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Logo & Mobile Quick Action Buttons */}
           <div className="flex items-center justify-between gap-2">
             <div 
-              onClick={onOpenTideChart}
+              onClick={onGoHome ? onGoHome : onOpenTideChart}
               className="flex items-center gap-1.5 sm:gap-2 cursor-pointer group"
-              title="Haz clic para ver la gráfica de mareas"
+              title={onGoHome ? "Ir a la página de inicio" : "Ver la gráfica de mareas"}
               id="header-logo-btn"
             >
               <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg shadow flex items-center justify-center text-white shrink-0 group-hover:scale-105 transition-transform">

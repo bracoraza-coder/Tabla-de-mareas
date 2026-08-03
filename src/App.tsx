@@ -12,10 +12,12 @@ import { TideFishChart3D } from './components/gauges/TideFishChart3D';
 import { Gauges3D } from './components/gauges/Gauges3D';
 import { SurfSection } from './components/SurfSection';
 import { SolunarSection } from './components/SolunarSection';
+import { ProfessionalFishingSuite } from './components/ProfessionalFishingSuite';
 import { MarineWeather } from './components/MarineWeather';
 import { MonthlyTable } from './components/MonthlyTable';
 import { QuickNav, TabKey } from './components/QuickNav';
 import { AiAssistant } from './components/AiAssistant';
+import { WelcomeHome } from './components/WelcomeHome';
 
 import { Port, UserUnits, NotificationSettings } from './types';
 import { PORTS_DATABASE, getPortById } from './data/portsData';
@@ -39,12 +41,7 @@ export default function App() {
   });
 
   const [hasUserDefinedPort, setHasUserDefinedPort] = useState<boolean>(() => {
-    if (parsePortFromHash()) return true;
-    try {
-      return !!localStorage.getItem('mareas_selected_port_id');
-    } catch {
-      return false;
-    }
+    return !!parsePortFromHash();
   });
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -140,7 +137,8 @@ export default function App() {
     } catch (e) {
       console.warn(e);
     }
-    handleOpenTideChart();
+    setActiveTab('grafico');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const { tideData, weatherData, loading, error } = useRealTideData(selectedPort, selectedDate);
@@ -165,12 +163,7 @@ export default function App() {
 
   const handleOpenTideChart = () => {
     setActiveTab('grafico');
-    setTimeout(() => {
-      const el = document.getElementById('tide-chart-section');
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 50);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const renderTabContent = () => {
@@ -185,8 +178,8 @@ export default function App() {
       case 'grafico':
         return (
           <div className="space-y-6">
-            <CurrentTideGauge dayData={tideData} port={selectedPort} units={units} isViewingToday={isViewingToday} />
             <TideFishChart3D data={tideData} units={units} port={selectedPort} />
+            <CurrentTideGauge dayData={tideData} port={selectedPort} units={units} isViewingToday={isViewingToday} />
             <Gauges3D weather={weatherData} units={units} />
             <TideChart data={tideData} units={units} port={selectedPort} />
             <AiAssistant port={selectedPort} dayData={tideData} units={units} />
@@ -204,14 +197,15 @@ export default function App() {
           <div className="space-y-6">
             <TideFishChart3D data={tideData} units={units} port={selectedPort} />
             <SolunarSection dayData={tideData} port={selectedPort} />
+            <ProfessionalFishingSuite dayData={tideData} weather={weatherData} port={selectedPort} />
             <AiAssistant port={selectedPort} dayData={tideData} units={units} />
           </div>
         );
       case 'meteo':
         return (
           <div className="space-y-6">
+            <MarineWeather weather={weatherData} units={units} port={selectedPort} isUpdating={loading} />
             <Gauges3D weather={weatherData} units={units} />
-            <MarineWeather weather={weatherData} units={units} isUpdating={loading} />
           </div>
         );
       case 'calendario':
@@ -244,6 +238,12 @@ export default function App() {
         onChangeUnits={setUnits}
         onOpenMapModal={() => setIsMapOpen(true)}
         onOpenTideChart={handleOpenTideChart}
+        onGoHome={() => {
+          setHasUserDefinedPort(false);
+          try {
+            localStorage.removeItem('mareas_selected_port_id');
+          } catch {}
+        }}
         notificationSettings={notificationSettings}
         onOpenNotificationsModal={() => setIsNotificationsOpen(true)}
         onRefresh={handleRefresh}
@@ -252,84 +252,20 @@ export default function App() {
         onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         activeTab={activeTab}
         onTabChange={(tab) => {
-          if (tab === 'grafico') {
-            handleOpenTideChart();
-          } else {
-            setActiveTab(tab);
-          }
+          setActiveTab(tab);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
       />
 
-      <main className="max-w-5xl mx-auto p-4 space-y-6 animate-fade-in mt-4">
-        {/* Banner if Port is not yet defined by user */}
-        {!hasUserDefinedPort && (
-          <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-cyan-950 border-2 border-cyan-500/80 rounded-2xl p-4 sm:p-5 shadow-2xl backdrop-blur-md mb-2">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="p-3 bg-cyan-600/30 border border-cyan-400/60 rounded-xl text-cyan-300 shrink-0">
-                  <MapPin className="w-6 h-6 animate-bounce text-cyan-400" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="bg-amber-500 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded uppercase tracking-wider">
-                      Puerto / Playa Por Definir
-                    </span>
-                    <h2 className="text-sm sm:text-base font-black text-white uppercase tracking-tight">
-                      Selecciona tu puerto o zona de playa
-                    </h2>
-                  </div>
-                  <p className="text-xs text-slate-300 mt-1">
-                    Define tu puerto o playa de interés para obtener predicciones precisas de mareas, oleaje, viento y calendario solunar.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0">
-                <button
-                  onClick={() => {
-                    if ('geolocation' in navigator) {
-                      navigator.geolocation.getCurrentPosition(
-                        (pos) => {
-                          const userLat = pos.coords.latitude;
-                          const userLng = pos.coords.longitude;
-                          let nearest = PORTS_DATABASE[0];
-                          let minDist = Infinity;
-                          PORTS_DATABASE.forEach(p => {
-                            const d = Math.hypot(p.lat - userLat, p.lng - userLng);
-                            if (d < minDist) {
-                              minDist = d;
-                              nearest = p;
-                            }
-                          });
-                          handleSelectPort(nearest);
-                        },
-                        () => {
-                          setIsMapOpen(true);
-                        }
-                      );
-                    } else {
-                      setIsMapOpen(true);
-                    }
-                  }}
-                  className="flex-1 md:flex-initial px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg transition-all cursor-pointer"
-                >
-                  <Navigation className="w-4 h-4 fill-white" />
-                  <span>GPS Automático</span>
-                </button>
-
-                <button
-                  onClick={() => setIsMapOpen(true)}
-                  className="flex-1 md:flex-initial px-3.5 py-2 bg-cyan-950 hover:bg-cyan-900 border border-cyan-700 text-cyan-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer"
-                >
-                  <Map className="w-4 h-4 text-cyan-400" />
-                  <span>Elegir en Mapa</span>
-                </button>
-              </div>
-            </div>
-          </div>
+      <main className="max-w-6xl mx-auto p-4 space-y-6 animate-fade-in mt-4">
+        {!hasUserDefinedPort ? (
+          <WelcomeHome
+            onSelectPort={handleSelectPort}
+            onOpenMapModal={() => setIsMapOpen(true)}
+          />
+        ) : (
+          renderTabContent()
         )}
-
-        {renderTabContent()}
       </main>
 
       <Footer
