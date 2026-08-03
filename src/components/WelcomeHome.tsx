@@ -48,6 +48,17 @@ export const WelcomeHome: React.FC<WelcomeHomeProps> = ({ onSelectPort, onOpenMa
               Selecciona tu puerto, playa o zona costera de interés para consultar en tiempo real las pleamares, bajamares, coeficientes de marea, estado del mar, viento, surf y solunar.
             </p>
 
+            <div className="pt-1">
+              <a
+                href="https://tabla-de-mareas.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-cyan-300 font-mono bg-slate-900/90 px-3.5 py-1.5 rounded-xl border border-cyan-500/40 hover:bg-slate-800 transition-colors shadow-lg"
+              >
+                <span>🌐 https://tabla-de-mareas.vercel.app/</span>
+              </a>
+            </div>
+
             {/* Quick Actions / GPS / Map */}
             <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
               <button
@@ -173,8 +184,13 @@ export const WelcomeHome: React.FC<WelcomeHomeProps> = ({ onSelectPort, onOpenMa
 
       </div>
 
-      <div className="mt-12 text-center text-xs text-slate-500 font-mono py-4 border-t border-slate-900">
-        Tabla de Mareas Profesional • Conexión en tiempo real con modelos meteorológicos y astronómicos • España y Costa Atlántica/Mediterránea
+      <div className="mt-12 text-center text-xs text-slate-400 font-mono py-4 border-t border-slate-900 space-y-1">
+        <div>Tabla de Mareas Profesional • Conexión en tiempo real con modelos meteorológicos y astronómicos • España y Costa Atlántica/Mediterránea</div>
+        <div>
+          <a href="https://tabla-de-mareas.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">
+            https://tabla-de-mareas.vercel.app/
+          </a>
+        </div>
       </div>
     </div>
   );
