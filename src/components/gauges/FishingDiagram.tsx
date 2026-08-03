@@ -5,12 +5,12 @@ interface FishingDiagramProps {
   label: string;
 }
 
-const FishIcon: React.FC<{ x: number; y: number; scale: number; color: string; flip?: boolean }> = ({ x, y, scale, color, flip }) => (
-  <g transform={`translate(${x},${y}) scale(${flip ? -scale : scale}, ${scale})`}>
-    <ellipse cx="0" cy="0" rx="14" ry="7" fill={color} />
+const FishIcon: React.FC<{ x: number; y: number; scale: number; color: string; gradId: string; flip?: boolean }> = ({ x, y, scale, color, gradId, flip }) => (
+  <g transform={`translate(${x},${y}) scale(${flip ? -scale : scale}, ${scale})`} filter="url(#fishShadow)">
+    <ellipse cx="0" cy="0" rx="14" ry="7" fill={`url(#${gradId})`} />
     <path d="M-13,0 L-22,-8 L-22,8 Z" fill={color} />
     <circle cx="7" cy="-1.5" r="1.6" fill="#0f172a" />
-    <path d="M-2,-6 Q3,-10 8,-7" stroke={color} strokeWidth="2" fill="none" opacity="0.6" />
+    <path d="M-2,-6 Q3,-10 8,-7" stroke="#ffffff" strokeWidth="1.5" fill="none" opacity="0.5" strokeLinecap="round" />
   </g>
 );
 
@@ -21,12 +21,21 @@ export const FishingDiagram: React.FC<FishingDiagramProps> = ({ activityScore, l
   const rating = filled <= 1 ? 0 : filled <= 2 ? 1 : filled <= 3 ? 2 : filled <= 4 ? 3 : 4;
 
   return (
-    <svg viewBox="0 0 300 220" className="w-full h-full">
+    <svg viewBox="0 0 300 220" preserveAspectRatio="xMidYMid meet" className="w-full h-full block">
       <defs>
         <linearGradient id="fishWater" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#0c4a6e" />
           <stop offset="100%" stopColor="#082f49" />
         </linearGradient>
+        <filter id="fishShadow" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#000000" floodOpacity="0.4" />
+        </filter>
+        {colors.map((c, i) => (
+          <linearGradient key={i} id={`fishGrad${i}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={c} stopOpacity="1" />
+            <stop offset="100%" stopColor={c} stopOpacity="0.6" />
+          </linearGradient>
+        ))}
       </defs>
       <rect x="0" y="0" width="300" height="220" rx="16" fill="url(#fishWater)" />
 
@@ -45,13 +54,15 @@ export const FishingDiagram: React.FC<FishingDiagramProps> = ({ activityScore, l
         const angle = (i / totalSlots) * Math.PI * 2;
         const cx = 150 + Math.cos(angle) * 55;
         const cy = 130 + Math.sin(angle) * 38;
+        const colorIdx = active ? Math.min(rating + 1, 4) : 0;
         return (
           <FishIcon
             key={i}
             x={cx}
             y={cy}
             scale={active ? 1.1 : 0.65}
-            color={active ? colors[rating + 1] || '#f97316' : '#334155'}
+            color={colors[colorIdx]}
+            gradId={`fishGrad${colorIdx}`}
             flip={i % 2 === 0}
           />
         );

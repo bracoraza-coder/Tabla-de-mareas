@@ -98,7 +98,7 @@ export const SolunarSection: React.FC<SolunarSectionProps> = ({
       </div>
 
       {/* Fish-o-meter: instant visual read of how good fishing is today */}
-      <div className="w-full h-56 sm:h-64 rounded-xl overflow-hidden border border-slate-800">
+      <div className="w-full aspect-[300/220] rounded-xl overflow-hidden border border-slate-800 shadow-lg">
         <FishingDiagram activityScore={activityScore} label={activityLabel} />
       </div>
 

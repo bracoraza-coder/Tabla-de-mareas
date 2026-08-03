@@ -9,8 +9,11 @@ export const SurfDiagram: React.FC<SurfDiagramProps> = ({ canSurf, score }) => {
   const mid = !canSurf && score >= 2.5; // "meh, maybe later" state
 
   return (
-    <svg viewBox="0 0 300 220" className="w-full h-full">
+    <svg viewBox="0 0 300 220" preserveAspectRatio="xMidYMid meet" className="w-full h-full block">
       <defs>
+        <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="3" stdDeviation="3" floodColor="#000000" floodOpacity="0.35" />
+        </filter>
         <linearGradient id="surfSky" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={canSurf ? '#0ea5e9' : '#334155'} />
           <stop offset="100%" stopColor={canSurf ? '#082f49' : '#0f172a'} />
@@ -37,7 +40,7 @@ export const SurfDiagram: React.FC<SurfDiagramProps> = ({ canSurf, score }) => {
           <circle cx="200" cy="105" r="4" fill="#f0f9ff" opacity="0.9" />
 
           {/* Happy surfer riding, arms up */}
-          <g transform="translate(150,95) rotate(-12)">
+          <g transform="translate(150,95) rotate(-12)" filter="url(#softShadow)" strokeLinejoin="round">
             {/* board */}
             <ellipse cx="0" cy="34" rx="34" ry="7" fill="#f97316" stroke="#7c2d12" strokeWidth="1.5" />
             {/* legs */}
@@ -66,7 +69,7 @@ export const SurfDiagram: React.FC<SurfDiagramProps> = ({ canSurf, score }) => {
           <path d="M0,175 Q75,160 150,172 T300,168" fill="none" stroke="#e2e8f0" strokeWidth="3" opacity="0.7" />
 
           {/* Surfer sitting on the board, waiting, neutral */}
-          <g transform="translate(150,150)">
+          <g transform="translate(150,150)" filter="url(#softShadow)">
             <ellipse cx="0" cy="18" rx="36" ry="7" fill="#f97316" stroke="#7c2d12" strokeWidth="1.5" />
             <path d="M-16,10 Q0,26 16,10" stroke="#fcd34d" strokeWidth="7" fill="none" strokeLinecap="round" />
             <line x1="0" y1="-10" x2="0" y2="10" stroke="#0ea5e9" strokeWidth="9" strokeLinecap="round" />
@@ -88,7 +91,7 @@ export const SurfDiagram: React.FC<SurfDiagramProps> = ({ canSurf, score }) => {
           <line x1="0" y1="180" x2="300" y2="180" stroke="#94a3b8" strokeWidth="2" opacity="0.6" />
 
           {/* Sad surfer sitting on sand, board stuck upright, head down */}
-          <g transform="translate(150,150)">
+          <g transform="translate(150,150)" filter="url(#softShadow)">
             {/* board stuck in sand */}
             <ellipse cx="30" cy="-10" rx="8" ry="26" fill="#64748b" stroke="#334155" strokeWidth="1.5" transform="rotate(8, 30, -10)" />
             {/* body slumped */}

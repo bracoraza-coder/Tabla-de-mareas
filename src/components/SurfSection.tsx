@@ -59,7 +59,7 @@ export const SurfSection: React.FC<SurfSectionProps> = ({ weather, dayData, port
       </div>
 
       {/* Surfer illustration: instantly shows if it's worth grabbing the board */}
-      <div className="w-full h-56 sm:h-64 rounded-xl overflow-hidden border border-slate-800">
+      <div className="w-full aspect-[300/220] rounded-xl overflow-hidden border border-slate-800 shadow-lg">
         <SurfDiagram canSurf={surf.score >= 4} score={surf.score} />
       </div>
 
