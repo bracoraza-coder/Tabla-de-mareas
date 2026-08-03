@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://tabla-de-mareas.vercel.app/sitemap.xml
