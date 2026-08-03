@@ -16,12 +16,12 @@ interface CookieBannerProps {
  * nothing to opt in or out of.
  */
 export const CookieBanner: React.FC<CookieBannerProps> = ({ onOpenLegal }) => {
-  const [showBanner, setShowBanner] = useState(false);
+  const [showBanner, useState] = React.useState(false);
 
   useEffect(() => {
     const consent = localStorage.getItem('mareas_cookie_consent');
     if (!consent) {
-      setShowBanner(true);
+      useState(true);
     }
   }, []);
 
@@ -30,7 +30,7 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({ onOpenLegal }) => {
       'mareas_cookie_consent',
       JSON.stringify({ acknowledged: true, timestamp: new Date().toISOString() })
     );
-    setShowBanner(false);
+    useState(false);
   };
 
   if (!showBanner) return null;

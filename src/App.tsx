@@ -1,478 +1,367 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { MapPin, Navigation, Map } from 'lucide-react';
 import { Header } from './components/Header';
-import { QuickNav } from './components/QuickNav';
+import { Footer } from './components/Footer';
+import { CookieBanner } from './components/CookieBanner';
+import { LegalModal, LegalTab } from './components/LegalModal';
+import { PortMapModal } from './components/PortMapModal';
+import { NotificationModal } from './components/NotificationModal';
 import { CurrentTideGauge } from './components/CurrentTideGauge';
 import { TideChart } from './components/TideChart';
+import { TideFishChart3D } from './components/gauges/TideFishChart3D';
+import { Gauges3D } from './components/gauges/Gauges3D';
 import { SurfSection } from './components/SurfSection';
 import { SolunarSection } from './components/SolunarSection';
 import { MarineWeather } from './components/MarineWeather';
 import { MonthlyTable } from './components/MonthlyTable';
+import { QuickNav, TabKey } from './components/QuickNav';
 import { AiAssistant } from './components/AiAssistant';
-import { PortMapModal } from './components/PortMapModal';
-import { NotificationModal } from './components/NotificationModal';
-import { LegalModal, LegalTab } from './components/LegalModal';
-import { CookieBanner } from './components/CookieBanner';
-import { Footer } from './components/Footer';
 
-import { Port, TideDayData, UserUnits, NotificationSettings } from './types';
-import { PORTS_DATABASE } from './data/portsData';
-import { getTideDayData, applyOfficialTideAnchors } from './utils/tideEngine';
-import { fetchOfficialTides, parseOfficialTimeToTimestamp } from './utils/officialTideFetcher';
-import { fetchLiveMarineWeather, getCachedMarineWeather } from './utils/liveMarineFetcher';
-import { checkAndTriggerTideAlerts } from './utils/notificationManager';
-import { getPortFromLocation, syncUrlToPort, updateHeadForPort } from './utils/router';
-import { formatZonedHHMM, getZonedParts } from './utils/timezoneHelpers';
+import { Port, UserUnits, NotificationSettings } from './types';
+import { PORTS_DATABASE, getPortById } from './data/portsData';
+import { useRealTideData } from './hooks/useRealTideData';
+import { parsePortFromHash, buildPortPath } from './utils/router';
 
 export default function App() {
-  // Theme (dark/light) - remembers the visitor's choice, defaulting to
-  // their system preference the very first time they visit.
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+  const [selectedPort, setSelectedPort] = useState<Port>(() => {
+    const portFromUrl = parsePortFromHash();
+    if (portFromUrl) return portFromUrl;
     try {
-      const saved = localStorage.getItem('mareas_theme');
-      if (saved === 'light' || saved === 'dark') return saved;
-    } catch { /* ignore */ }
-    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: light)').matches) {
-      return 'light';
+      const savedPortId = localStorage.getItem('mareas_selected_port_id');
+      if (savedPortId) {
+        const found = getPortById(savedPortId);
+        if (found) return found;
+      }
+    } catch {
+      // ignore
     }
-    return 'dark';
+    return PORTS_DATABASE[0];
   });
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('light', theme === 'light');
+  const [hasUserDefinedPort, setHasUserDefinedPort] = useState<boolean>(() => {
+    if (parsePortFromHash()) return true;
     try {
-      localStorage.setItem('mareas_theme', theme);
-    } catch { /* ignore */ }
-  }, [theme]);
+      return !!localStorage.getItem('mareas_selected_port_id');
+    } catch {
+      return false;
+    }
+  });
 
-  const toggleTheme = () => setTheme(t => (t === 'dark' ? 'light' : 'dark'));
-
-  const [activeTab, setActiveTab] = useState<'grafico' | 'surf' | 'pesca' | 'meteo' | 'calendario'>('grafico');
-
-  // Active Port - initialised from the URL (e.g. /mareas/cadiz) when present,
-  // so every port has its own shareable, indexable address.
-  const [selectedPort, setSelectedPortState] = useState<Port>(
-    () => getPortFromLocation() || PORTS_DATABASE[0]
-  );
-
-  // Central port selector: updates state, the browser URL and the page's
-  // SEO tags (title/description/canonical/OG) all in one place, so every
-  // entry point (search, favorites, GPS, map modal, notifications) stays
-  // in sync automatically.
-  const selectPort = (port: Port, replaceHistory = false) => {
-    setSelectedPortState(port);
-    syncUrlToPort(port, replaceHistory);
-    updateHeadForPort(port);
-  };
-
-  // Set the correct URL/SEO tags for the initial port on first load, and
-  // keep everything in sync with the browser's Back/Forward buttons.
-  useEffect(() => {
-    syncUrlToPort(selectedPort, true);
-    updateHeadForPort(selectedPort);
-
-    const handlePopState = () => {
-      const portFromUrl = getPortFromLocation();
-      if (portFromUrl) setSelectedPortState(portFromUrl);
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  
-  // Selected Date
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  
+  // Modals
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [legalModalState, setLegalModalState] = useState<{isOpen: boolean; tab: LegalTab}>({ isOpen: false, tab: 'aviso-legal' });
 
-  // Favorites in localStorage
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('tablademarea_favorites');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+  // Preferences
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [units, setUnits] = useState<UserUnits>({ height: 'm', speed: 'knots', temp: 'C' });
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
+    enabled: false,
+    subscribedPortIds: [],
+    alertTimingMinutes: 30,
+    notifyPleamar: true,
+    notifyBajamar: true,
+    notifyMareasVivas: false,
   });
-
-  // Units Settings
-  const [units, setUnits] = useState<UserUnits>(() => {
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try {
-      const saved = localStorage.getItem('tablademarea_units');
-      return saved ? JSON.parse(saved) : { height: 'm', speed: 'knots', temp: 'C' };
+      const savedTheme = localStorage.getItem('mareas_theme');
+      if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
     } catch {
-      return { height: 'm', speed: 'knots', temp: 'C' };
+      // ignore
     }
+    return 'dark'; // Dark mode by default
   });
+  const [activeTab, setActiveTab] = useState<TabKey>('grafico');
 
-  // Notification Settings
-  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() => {
-    try {
-      const saved = localStorage.getItem('tablademarea_notifications');
-      return saved ? JSON.parse(saved) : {
-        enabled: true,
-        subscribedPortIds: [],
-        alertTimingMinutes: 15,
-        notifyPleamar: true,
-        notifyBajamar: true,
-        notifyMareasVivas: true,
-      };
-    } catch {
-      return {
-        enabled: true,
-        subscribedPortIds: [],
-        alertTimingMinutes: 15,
-        notifyPleamar: true,
-        notifyBajamar: true,
-        notifyMareasVivas: true,
-      };
-    }
-  });
-
-  // Modals state
-  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
-  const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
-  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
-  const [legalModalTab, setLegalModalTab] = useState<LegalTab>('aviso-legal');
-
-  const handleOpenLegal = (tab: LegalTab) => {
-    setLegalModalTab(tab);
-    setIsLegalModalOpen(true);
-  };
-
-  // Day Tide Data state
-  const [dayData, setDayData] = useState<TideDayData>(() =>
-    getTideDayData(PORTS_DATABASE[0], new Date(), Date.now())
-  );
-
-  // Sync favorites to localStorage
+  // Load state from local storage and URL hash on mount
   useEffect(() => {
-    try {
-      localStorage.setItem('tablademarea_favorites', JSON.stringify(favorites));
-    } catch (e) {
-      console.error(e);
+    // 1. URL Hash routing
+    const portFromUrl = parsePortFromHash();
+    if (portFromUrl) {
+      setSelectedPort(portFromUrl);
+      setHasUserDefinedPort(true);
     }
+
+    // 2. LocalStorage Preferences
+    try {
+      const favs = localStorage.getItem('mareas_favs');
+      if (favs) setFavorites(JSON.parse(favs));
+
+      const savedUnits = localStorage.getItem('mareas_units');
+      if (savedUnits) setUnits(JSON.parse(savedUnits));
+
+      const notif = localStorage.getItem('mareas_notif');
+      if (notif) setNotificationSettings(JSON.parse(notif));
+
+      const savedTheme = localStorage.getItem('mareas_theme');
+      if (savedTheme === 'light' || savedTheme === 'dark') {
+        setTheme(savedTheme);
+      }
+    } catch (e) {
+      console.warn('Could not load preferences from local storage', e);
+    }
+  }, []);
+
+  // Update hash when port changes
+  useEffect(() => {
+    window.history.replaceState(null, '', buildPortPath(selectedPort));
+  }, [selectedPort]);
+
+  // Sync state to local storage when it changes
+  useEffect(() => {
+    localStorage.setItem('mareas_favs', JSON.stringify(favorites));
   }, [favorites]);
 
-  // Sync units to localStorage
   useEffect(() => {
-    try {
-      localStorage.setItem('tablademarea_units', JSON.stringify(units));
-    } catch (e) {
-      console.error(e);
-    }
+    localStorage.setItem('mareas_units', JSON.stringify(units));
   }, [units]);
 
-  // Sync notifications settings to localStorage
   useEffect(() => {
-    try {
-      localStorage.setItem('tablademarea_notifications', JSON.stringify(notificationSettings));
-    } catch (e) {
-      console.error(e);
-    }
+    localStorage.setItem('mareas_notif', JSON.stringify(notificationSettings));
   }, [notificationSettings]);
 
-  // Periodically check for tide alerts
   useEffect(() => {
-    const checkAlerts = () => {
-      checkAndTriggerTideAlerts(
-        notificationSettings.subscribedPortIds,
-        notificationSettings,
-        units,
-        selectPort
-      );
-    };
-
-    checkAlerts();
-    const interval = setInterval(checkAlerts, 30000);
-    return () => clearInterval(interval);
-  }, [notificationSettings, units]);
-
-  // Recalculate tide day data when port or date changes, and fetch live marine telemetry
-  const [isWeatherUpdating, setIsWeatherUpdating] = useState(false);
-
-  // Whether the selected date is "today" IN THE PORT'S OWN TIMEZONE. This
-  // matters because "current water height", "next tide" countdown and the
-  // "EN VIVO" weather badge only make sense for the real present moment -
-  // showing them for a date the user is browsing in the past or future
-  // (using today's real clock time under the hood) would be misleading.
-  const isViewingToday = (() => {
-    const todayInPort = getZonedParts(Date.now(), selectedPort.timezone);
-    return (
-      selectedDate.getFullYear() === todayInPort.year &&
-      selectedDate.getMonth() + 1 === todayInPort.month &&
-      selectedDate.getDate() === todayInPort.day
-    );
-  })();
-
-  useEffect(() => {
-    const abortController = new AbortController();
-    // For "today", evaluate at the real current instant. For any other
-    // date, evaluate at local noon of that day - there is no meaningful
-    // "current instant" for a day you're not actually in right now.
-    const referenceTimestamp = isViewingToday
-      ? Date.now()
-      : new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 12, 0, 0).getTime();
-
-    const data = getTideDayData(selectedPort, selectedDate, referenceTimestamp);
-
-    // Try the official source (our own /api/mareas backend -> IHM) on top of
-    // the local model. This never blocks the UI: the estimated model shows
-    // immediately, and gets upgraded to real official times if/when the
-    // official lookup succeeds.
-    fetchOfficialTides(selectedPort, data.dateStr).then(result => {
-      if (abortController.signal.aborted) return;
-      if (result.ok && result.tides && result.tides.length >= 2) {
-        const anchors = result.tides
-          .map(t => {
-            const timestamp = parseOfficialTimeToTimestamp(t.time, data.dateStr, selectedPort.timezone);
-            return timestamp === null ? null : { timestamp, height: t.height, type: t.type };
-          })
-          .filter((a): a is { timestamp: number; height: number; type: 'pleamar' | 'bajamar' } => a !== null);
-
-        if (anchors.length >= 2) {
-          setDayData(prev => applyOfficialTideAnchors(prev, anchors, selectedPort, result.stationName || 'IHM'));
-        }
-      }
-    });
-
-    if (isViewingToday) {
-      // 1) Show cached live data instantly if we have it (no network wait, no
-      //    flicker back to the local harmonic fallback when revisiting a port).
-      const cached = getCachedMarineWeather(selectedPort.id);
-      setDayData(cached ? { ...data, weather: cached.weather } : data);
-
-      // 2) Revalidate in the background so the figures stay fresh, without blocking the UI.
-      setIsWeatherUpdating(true);
-      fetchLiveMarineWeather(selectedPort, data.weather, abortController.signal)
-        .then(result => {
-          if (abortController.signal.aborted) return;
-          if (result.isLive) {
-            setDayData(prev => ({ ...prev, weather: result.weather }));
-          }
-        })
-        .finally(() => {
-          if (!abortController.signal.aborted) setIsWeatherUpdating(false);
-        });
+    localStorage.setItem('mareas_theme', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
     } else {
-      // Browsing a different day: never show "today's live weather" mislabelled
-      // as this day's conditions. Use the date-specific estimated model only.
-      setDayData(data);
-      setIsWeatherUpdating(false);
+      document.documentElement.classList.remove('dark');
     }
+  }, [theme]);
 
-    return () => {
-      abortController.abort();
-    };
-  }, [selectedPort, selectedDate, isViewingToday]);
-
-  // Prefetch live weather for the user's favorite ports during idle time, so
-  // switching to any of them from the header feels instant (served from cache).
-  useEffect(() => {
-    if (favorites.length === 0) return;
-    const idleWindow = window as typeof window & {
-      requestIdleCallback?: (cb: () => void) => number;
-    };
-    const schedule = idleWindow.requestIdleCallback || ((cb: () => void) => window.setTimeout(cb, 800));
-
-    const handle = schedule(() => {
-      favorites.forEach((portId, idx) => {
-        const port = PORTS_DATABASE.find(p => p.id === portId);
-        if (!port || getCachedMarineWeather(port.id)) return;
-        // Stagger requests slightly to avoid bursting the free API all at once.
-        setTimeout(() => {
-          const seedData = getTideDayData(port, new Date(), Date.now());
-          fetchLiveMarineWeather(port, seedData.weather).catch(() => {});
-        }, idx * 400);
-      });
-    });
-
-    return () => {
-      if (idleWindow.requestIdleCallback && typeof handle === 'number') {
-        // cancelIdleCallback isn't consistently typed; guard defensively.
-        (window as any).cancelIdleCallback?.(handle);
-      }
-    };
-  }, [favorites]);
-
-  // Auto-refresh live marine telemetry every 10 minutes so every visitor
-  // always sees up-to-date, freely-sourced weather/wave data (Open-Meteo),
-  // without needing to manually reload the page. Only applies when viewing
-  // today - refreshing "live" data for a different day makes no sense.
-  useEffect(() => {
-    if (!isViewingToday) return;
-    const AUTO_REFRESH_MS = 10 * 60 * 1000;
-    const interval = setInterval(() => {
-      fetchLiveMarineWeather(selectedPort, dayData.weather).then(result => {
-        if (result.isLive) {
-          // Only ever touch the weather field here. Tide times (official
-          // IHM or estimated) don't change within the same day, and must
-          // never be silently replaced back to the local model by this
-          // periodic refresh.
-          setDayData(curr => ({ ...curr, weather: result.weather }));
-        }
-      });
-    }, AUTO_REFRESH_MS);
-    return () => clearInterval(interval);
-  }, [selectedPort, selectedDate, isViewingToday]);
-
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [refreshToast, setRefreshToast] = useState<string | null>(null);
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-
-    if (!isViewingToday) {
-      // Nothing "live" to refresh for a day that isn't today - just let the
-      // button briefly acknowledge the tap.
-      setRefreshToast('Estás viendo la previsión de otro día: los datos en vivo solo aplican a hoy.');
-      setTimeout(() => setIsRefreshing(false), 400);
-      setTimeout(() => setRefreshToast(null), 3200);
-      return;
+  const handleSelectPort = (port: Port) => {
+    setSelectedPort(port);
+    setHasUserDefinedPort(true);
+    try {
+      localStorage.setItem('mareas_selected_port_id', port.id);
+    } catch (e) {
+      console.warn(e);
     }
-
-    const now = new Date();
-    const initialData = getTideDayData(selectedPort, selectedDate, now.getTime());
-    setDayData(initialData);
-
-    const liveResult = await fetchLiveMarineWeather(selectedPort, initialData.weather);
-    if (liveResult.isLive) {
-      setDayData(prev => ({
-        ...prev,
-        weather: liveResult.weather
-      }));
-    }
-    
-    const timeStr = formatZonedHHMM(now.getTime(), selectedPort.timezone);
-    setRefreshToast(`Telemetría en tiempo real (Open-Meteo) actualizada a las ${timeStr}h (hora local de ${selectedPort.name.split(' (')[0]})`);
-    
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 600);
-
-    setTimeout(() => {
-      setRefreshToast(null);
-    }, 3800);
+    handleOpenTideChart();
   };
 
-  const handleToggleFavorite = (portId: string) => {
-    setFavorites(prev => {
-      const isAdding = !prev.includes(portId);
-      const updatedFavs = isAdding ? [...prev, portId] : prev.filter(id => id !== portId);
-      
-      setNotificationSettings(prevNotif => {
-        const currentSubscribed = prevNotif.subscribedPortIds;
-        let newSubscribed = currentSubscribed;
-        if (isAdding) {
-          if (!currentSubscribed.includes(portId)) {
-            newSubscribed = [...currentSubscribed, portId];
-          }
-        } else {
-          newSubscribed = currentSubscribed.filter(id => id !== portId);
-        }
-        return { ...prevNotif, subscribedPortIds: newSubscribed };
-      });
+  const { tideData, weatherData, loading, error } = useRealTideData(selectedPort, selectedDate);
 
-      return updatedFavs;
-    });
+  const toggleFavorite = (portId: string) => {
+    setFavorites(prev => 
+      prev.includes(portId) ? prev.filter(id => id !== portId) : [...prev, portId]
+    );
+  };
+
+  const handleRefresh = () => {
+    setSelectedDate(new Date(selectedDate.getTime()));
+  };
+
+  // Check if viewing today
+  const isViewingToday = (() => {
+    const today = new Date();
+    return selectedDate.getDate() === today.getDate() &&
+           selectedDate.getMonth() === today.getMonth() &&
+           selectedDate.getFullYear() === today.getFullYear();
+  })();
+
+  const handleOpenTideChart = () => {
+    setActiveTab('grafico');
+    setTimeout(() => {
+      const el = document.getElementById('tide-chart-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
+  };
+
+  const renderTabContent = () => {
+    if (loading && !tideData) {
+       return <div className="p-20 text-center text-slate-400 animate-pulse font-mono text-sm">Cargando modelo mareográfico 3D y datos marinos...</div>;
+    }
+    if (error) {
+       return <div className="p-20 text-center text-red-400 font-mono">Error de conexión: {error}</div>;
+    }
+
+    switch (activeTab) {
+      case 'grafico':
+        return (
+          <div className="space-y-6">
+            <CurrentTideGauge dayData={tideData} port={selectedPort} units={units} isViewingToday={isViewingToday} />
+            <TideFishChart3D data={tideData} units={units} port={selectedPort} />
+            <Gauges3D weather={weatherData} units={units} />
+            <TideChart data={tideData} units={units} port={selectedPort} />
+            <AiAssistant port={selectedPort} dayData={tideData} units={units} />
+          </div>
+        );
+      case 'surf':
+        return (
+          <div className="space-y-6">
+            <SurfSection dayData={tideData} weather={weatherData} port={selectedPort} units={units} />
+            <Gauges3D weather={weatherData} units={units} />
+          </div>
+        );
+      case 'pesca':
+        return (
+          <div className="space-y-6">
+            <TideFishChart3D data={tideData} units={units} port={selectedPort} />
+            <SolunarSection dayData={tideData} port={selectedPort} />
+            <AiAssistant port={selectedPort} dayData={tideData} units={units} />
+          </div>
+        );
+      case 'meteo':
+        return (
+          <div className="space-y-6">
+            <Gauges3D weather={weatherData} units={units} />
+            <MarineWeather weather={weatherData} units={units} isUpdating={loading} />
+          </div>
+        );
+      case 'calendario':
+        return (
+          <MonthlyTable 
+            port={selectedPort} 
+            units={units} 
+            selectedDate={selectedDate} 
+            onSelectDate={(d) => {
+              setSelectedDate(d);
+              handleOpenTideChart();
+            }} 
+          />
+        );
+      default:
+        return null;
+    }
   };
 
   return (
-    <div className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500 selection:text-slate-950 flex flex-col justify-between antialiased relative">
-      
-      {/* Floating Refresh Toast Banner */}
-      {refreshToast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-blue-600 text-white px-4 py-2 rounded-full shadow-2xl text-xs sm:text-sm font-semibold flex items-center gap-2 border border-blue-400 animate-bounce transition-all">
-          <RefreshCw className="w-4 h-4 animate-spin text-cyan-200" />
-          <span>{refreshToast}</span>
-        </div>
-      )}
-
-      {/* Header Navigation */}
+    <div className={`min-h-screen font-sans ${theme === 'dark' ? 'bg-slate-950 text-slate-200' : 'bg-slate-900 text-slate-100'}`}>
       <Header
         selectedPort={selectedPort}
-        onSelectPort={selectPort}
+        onSelectPort={handleSelectPort}
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
         favorites={favorites}
-        onToggleFavorite={handleToggleFavorite}
+        onToggleFavorite={toggleFavorite}
         units={units}
         onChangeUnits={setUnits}
-        onOpenMapModal={() => setIsMapModalOpen(true)}
+        onOpenMapModal={() => setIsMapOpen(true)}
+        onOpenTideChart={handleOpenTideChart}
         notificationSettings={notificationSettings}
-        onOpenNotificationsModal={() => setIsNotificationsModalOpen(true)}
+        onOpenNotificationsModal={() => setIsNotificationsOpen(true)}
         onRefresh={handleRefresh}
-        isRefreshing={isRefreshing}
+        isRefreshing={loading}
         theme={theme}
-        onToggleTheme={toggleTheme}
+        onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          if (tab === 'grafico') {
+            handleOpenTideChart();
+          } else {
+            setActiveTab(tab);
+          }
+        }}
       />
 
-      {/* Section tabs: only the selected section is shown, large and centered */}
-      <QuickNav active={activeTab} onChange={(tab) => { setActiveTab(tab); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+      <main className="max-w-5xl mx-auto p-4 space-y-6 animate-fade-in mt-4">
+        {/* Banner if Port is not yet defined by user */}
+        {!hasUserDefinedPort && (
+          <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-cyan-950 border-2 border-cyan-500/80 rounded-2xl p-4 sm:p-5 shadow-2xl backdrop-blur-md mb-2">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="p-3 bg-cyan-600/30 border border-cyan-400/60 rounded-xl text-cyan-300 shrink-0">
+                  <MapPin className="w-6 h-6 animate-bounce text-cyan-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="bg-amber-500 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded uppercase tracking-wider">
+                      Puerto / Playa Por Definir
+                    </span>
+                    <h2 className="text-sm sm:text-base font-black text-white uppercase tracking-tight">
+                      Selecciona tu puerto o zona de playa
+                    </h2>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1">
+                    Define tu puerto o playa de interés para obtener predicciones precisas de mareas, oleaje, viento y calendario solunar.
+                  </p>
+                </div>
+              </div>
 
-      {/* Main Container Content: only the active tab's content shows */}
-      <main className="max-w-5xl mx-auto px-2 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 flex-1 w-full">
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0">
+                <button
+                  onClick={() => {
+                    if ('geolocation' in navigator) {
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                          const userLat = pos.coords.latitude;
+                          const userLng = pos.coords.longitude;
+                          let nearest = PORTS_DATABASE[0];
+                          let minDist = Infinity;
+                          PORTS_DATABASE.forEach(p => {
+                            const d = Math.hypot(p.lat - userLat, p.lng - userLng);
+                            if (d < minDist) {
+                              minDist = d;
+                              nearest = p;
+                            }
+                          });
+                          handleSelectPort(nearest);
+                        },
+                        () => {
+                          setIsMapOpen(true);
+                        }
+                      );
+                    } else {
+                      setIsMapOpen(true);
+                    }
+                  }}
+                  className="flex-1 md:flex-initial px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg transition-all cursor-pointer"
+                >
+                  <Navigation className="w-4 h-4 fill-white" />
+                  <span>GPS Automático</span>
+                </button>
 
-        {activeTab === 'grafico' && (
-          <>
-            <CurrentTideGauge dayData={dayData} port={selectedPort} units={units} isViewingToday={isViewingToday} />
-            <TideChart dayData={dayData} port={selectedPort} units={units} />
-          </>
+                <button
+                  onClick={() => setIsMapOpen(true)}
+                  className="flex-1 md:flex-initial px-3.5 py-2 bg-cyan-950 hover:bg-cyan-900 border border-cyan-700 text-cyan-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer"
+                >
+                  <Map className="w-4 h-4 text-cyan-400" />
+                  <span>Elegir en Mapa</span>
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
-        {activeTab === 'surf' && (
-          <SurfSection weather={dayData.weather} dayData={dayData} port={selectedPort} units={units} />
-        )}
-
-        {activeTab === 'pesca' && (
-          <>
-            <SolunarSection solunar={dayData.solunar} dateStr={dayData.dateStr} />
-            <AiAssistant port={selectedPort} dayData={dayData} units={units} />
-          </>
-        )}
-
-        {activeTab === 'meteo' && (
-          <MarineWeather weather={dayData.weather} units={units} isUpdating={isWeatherUpdating} />
-        )}
-
-        {activeTab === 'calendario' && (
-          <MonthlyTable port={selectedPort} units={units} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
-        )}
-
+        {renderTabContent()}
       </main>
 
-      {/* Interactive Global Port Map Modal */}
-      <PortMapModal
-        isOpen={isMapModalOpen}
-        onClose={() => setIsMapModalOpen(false)}
-        selectedPort={selectedPort}
-        onSelectPort={selectPort}
+      <Footer
+        onSelectPort={(p) => { handleSelectPort(p); window.scrollTo(0,0); }}
+        onOpenLegal={(tab) => setLegalModalState({ isOpen: true, tab })}
       />
 
-      {/* Browser Tide Notification Settings Modal */}
+      {/* Modals & Overlays */}
+      <PortMapModal
+        isOpen={isMapOpen}
+        onClose={() => setIsMapOpen(false)}
+        selectedPort={selectedPort}
+        onSelectPort={handleSelectPort}
+      />
       <NotificationModal
-        isOpen={isNotificationsModalOpen}
-        onClose={() => setIsNotificationsModalOpen(false)}
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
         favorites={favorites}
         settings={notificationSettings}
         onUpdateSettings={setNotificationSettings}
         selectedPort={selectedPort}
-        onSelectPort={selectPort}
+        onSelectPort={setSelectedPort}
         units={units}
       />
-
-      {/* Legal & Compliance Modal */}
       <LegalModal
-        isOpen={isLegalModalOpen}
-        initialTab={legalModalTab}
-        onClose={() => setIsLegalModalOpen(false)}
+        isOpen={legalModalState.isOpen}
+        initialTab={legalModalState.tab}
+        onClose={() => setLegalModalState({ isOpen: false, tab: 'aviso-legal' })}
       />
-
-      {/* Floating Cookie Consent Banner */}
-      <CookieBanner onOpenLegal={handleOpenLegal} />
-
-      {/* Footer */}
-      <Footer onSelectPort={selectPort} onOpenLegal={handleOpenLegal} />
-
+      <CookieBanner
+        onOpenLegal={(tab) => setLegalModalState({ isOpen: true, tab })}
+      />
     </div>
   );
 }
-

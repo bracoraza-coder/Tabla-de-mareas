@@ -1,82 +1,74 @@
 export interface Port {
   id: string;
   name: string;
-  region: string;
   country: string;
-  timezone: string; // IANA timezone, e.g. "Europe/Madrid", "Asia/Tokyo"
+  region: string;
   lat: number;
   lng: number;
-  baseHeight: number; // mean sea level in meters
-  amplitude: number;  // semi-diurnal tide amplitude
-  phaseShiftHours: number; // local phase shift
-  waterTempAvg: number; // avg sea temp °C
-  isPopular?: boolean;
+  timezone: string;
+  baseHeight: number; // For algorithmic approximation
+  amplitude: number;  // For algorithmic approximation
+  phaseDelayMinutes: number; // For algorithmic approximation relative to standard Moon transit
+  isPopular: boolean;
 }
 
-export interface HighLowTide {
+export interface TideEvent {
+  time: string; // HH:MM
+  height: number; // meters
   type: 'pleamar' | 'bajamar';
-  time: string; // HH:mm
-  height: number; // meters
-  timestamp: number; // unix timestamp ms
 }
 
-export interface HourlyTidePoint {
-  time: string; // HH:mm
-  timeLabel: string;
-  height: number; // meters
-  timestamp: number;
-  isCurrent?: boolean;
-}
-
-export interface SolunarPeriod {
-  name: string; // e.g. "Período Mayor 1", "Período Menor 1"
-  type: 'mayor' | 'menor';
-  start: string; // HH:mm
-  end: string;   // HH:mm
-  quality: 'alta' | 'media' | 'excelente';
+export interface CurvePoint {
+  time: string;
+  height: number;
 }
 
 export interface SolunarData {
-  activityScore: number; // 1 to 5
-  activityLabel: 'Muy Baja' | 'Baja' | 'Media' | 'Alta' | 'Excelente';
-  majorPeriods: SolunarPeriod[];
-  minorPeriods: SolunarPeriod[];
-  sunrise: string;
-  solarNoon: string;
-  sunset: string;
-  dayLength: string;
-  moonrise: string;
-  moonset: string;
-  moonTransit: string;
-  moonPhaseName: string; // e.g., "Luna Llena", "Cuarto Creciente"
-  moonPhaseIcon: string;
-  moonIllumination: number; // 0 - 100%
-  moonAgeDays: number;
+  moonPhaseName: string;
+  illuminationPercent: number; // 0-100
+  isWaxing: boolean;
+  majorPeriods: { start: string; end: string }[];
+  minorPeriods: { start: string; end: string }[];
+  activityScore: number; // 0-100
+}
+
+export interface TideDayData {
+  dateStr: string; // YYYY-MM-DD
+  highLows: TideEvent[];
+  curvePoints: CurvePoint[];
+  coefficient: number; // 30-120
+  
+  // Solunar & Sun
+  solunar: SolunarData;
+  sunrise: string; // HH:MM
+  sunset: string; // HH:MM
+
+  // Real-time state
+  currentWaterHeight: number;
+  currentTideState: 'subiendo' | 'bajando';
+  nextTide: TideEvent;
+  nextTideTimeLeftStr: string;
 }
 
 export interface MarineWeather {
-  temp: number; // °C
-  feelsLike: number; // °C
-  condition: string; // "Soleado", "Parcialmente nublado", "Chubascos", etc.
-  conditionCode: string; // icon key
+  // Wind
   windSpeedKnots: number;
-  windSpeedKm: number;
-  windDirection: string; // e.g. "NNE", "SO"
+  windDirection: string; // N, NE, etc.
   windDegrees: number;
   windGustKnots: number;
+  // Waves
+  waveHeightMeters: number;
+  waveDirection: string;
+  wavePeriodSeconds: number;
+  waterTemp: number; // Celsius
+  seaStateName: string; // Marejadilla, Marejada, etc.
+  // Beaufort
   beaufortScale: number;
   beaufortDescription: string;
-  waveHeightMeters: number;
-  wavePeriodSeconds: number;
-  waveDirection: string;
-  waveDegrees: number;
-  seaStateName: string; // "Mar Calma", "Marejadilla", "Marejada", "Fuerte Marejada"
-  // Primary groundswell (the surfable component, separate from local wind chop)
-  swellHeightMeters: number;
-  swellPeriodSeconds: number;
-  swellDirection: string;
-  swellDegrees: number;
-  waterTemp: number; // °C
+  // Standard Weather
+  temp: number; // Celsius
+  feelsLike: number;
+  condition: string; // Sunny, Cloudy, etc.
   pressureHpa: number;
   pressureTrend: 'ascenso' | 'descenso' | 'estable';
   humidityPercent: number;
@@ -84,53 +76,35 @@ export interface MarineWeather {
   visibilityKm: number;
 }
 
-export interface TideDayData {
-  dateStr: string; // YYYY-MM-DD
-  dayOfWeek: string;
-  coefficient: number; // 30 - 120
-  highLows: HighLowTide[];
-  hourlyPoints: HourlyTidePoint[];
-  currentWaterHeight: number;
-  currentTideState: 'subiendo' | 'bajando' | 'pleamar' | 'bajamar';
-  nextTide: HighLowTide;
-  nextTideTimeLeftStr: string;
-  solunar: SolunarData;
-  weather: MarineWeather;
-  tideSource: 'IHM' | 'modelo-estimado';
-  tideSourceDetail?: string;
-}
-
-export interface MonthlyTideRow {
-  dateStr: string;
-  dayNumber: number;
-  dayName: string;
-  coefficient: number;
-  highTidesStr: string;
-  lowTidesStr: string;
-  moonPhaseIcon: string;
-  moonPhaseName: string;
-  solunarScore: number;
-  sunrise: string;
-  sunset: string;
-}
-
-export type UnitHeight = 'm' | 'ft';
-export type UnitSpeed = 'knots' | 'kmh' | 'mph';
-export type UnitTemp = 'C' | 'F';
-
+// User Preferences stored in localStorage
 export interface UserUnits {
-  height: UnitHeight;
-  speed: UnitSpeed;
-  temp: UnitTemp;
+  height: 'm' | 'ft';
+  speed: 'knots' | 'kmh' | 'mph';
+  temp: 'C' | 'F';
 }
 
 export interface NotificationSettings {
   enabled: boolean;
   subscribedPortIds: string[];
-  alertTimingMinutes: number; // 0, 15, 30, 60
+  alertTimingMinutes: number; // e.g., 60 mins before
   notifyPleamar: boolean;
   notifyBajamar: boolean;
-  notifyMareasVivas: boolean; // coeff >= 80
+  notifyMareasVivas: boolean; // only notify if coef >= 80
+}
+
+// For the monthly table
+export interface MonthlyTideRow {
+  dateStr: string; // YYYY-MM-DD
+  dayNumber: number;
+  dayName: string; // Lunes, Martes...
+  coefficient: number;
+  highTidesStr: string; // "04:15(2.4m) 16:30(2.6m)"
+  lowTidesStr: string;  // "10:20(0.4m) 22:45(0.5m)"
+  moonPhaseIcon: string;
+  moonPhaseName: string;
+  solunarScore: number; // 1-5 stars approx
+  sunrise: string;
+  sunset: string;
 }
 
 export interface ScheduledAlert {
@@ -138,10 +112,8 @@ export interface ScheduledAlert {
   portId: string;
   portName: string;
   tideType: 'pleamar' | 'bajamar';
-  timeStr: string; // HH:mm
-  scheduledAlertTimeStr: string; // HH:mm
+  timeStr: string; // HH:MM of the actual tide event
+  scheduledAlertTimeStr: string; // HH:MM when the alert will fire
   heightMeters: number;
   coefficient: number;
-  timestamp: number;
 }
-

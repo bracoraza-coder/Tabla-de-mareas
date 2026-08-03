@@ -1,8 +1,8 @@
 import React from 'react';
 
 interface FishingDiagramProps {
-  activityScore: number; // 1-5
-  label: string;
+  activityScore: number;
+  label?: string;
 }
 
 const FishIcon: React.FC<{ x: number; y: number; scale: number; color: string; gradId: string; flip?: boolean }> = ({ x, y, scale, color, gradId, flip }) => (

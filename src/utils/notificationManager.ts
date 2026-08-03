@@ -1,176 +1,108 @@
-import { Port, NotificationSettings, ScheduledAlert, UserUnits } from '../types';
+import { NotificationSettings, Port, UserUnits, ScheduledAlert, TideDayData } from '../types';
+import { calculateTideDayData } from './tideEngine';
 import { PORTS_DATABASE } from '../data/portsData';
-import { getTideDayData, formatHeight } from './tideEngine';
-import { formatZonedHHMM } from './timezoneHelpers';
+import { getZonedParts } from './timezoneHelpers';
 
+/**
+ * Checks and requests browser notification permission.
+ */
 export function getNotificationPermission(): NotificationPermission | 'unsupported' {
-  if (typeof window === 'undefined' || !('Notification' in window)) {
-    return 'unsupported';
-  }
+  if (!('Notification' in window)) return 'unsupported';
   return Notification.permission;
 }
 
-export async function requestNotificationPermission(): Promise<NotificationPermission | 'unsupported'> {
-  if (typeof window === 'undefined' || !('Notification' in window)) {
-    return 'unsupported';
-  }
-  try {
-    const permission = await Notification.requestPermission();
-    return permission;
-  } catch (e) {
-    console.error('Error requesting notification permission:', e);
-    return Notification.permission;
-  }
+export async function requestNotificationPermission(): Promise<NotificationPermission> {
+  if (!('Notification' in window)) return 'denied';
+  const permission = await Notification.requestPermission();
+  return permission;
 }
 
-export function sendTestNotification(portName: string = 'Cádiz'): boolean {
-  if (typeof window === 'undefined' || !('Notification' in window)) {
-    alert('Tu navegador no soporta las notificaciones del sistema.');
-    return false;
-  }
-
-  if (Notification.permission !== 'granted') {
-    alert('Debes conceder permisos de notificación en tu navegador para recibir alertas.');
-    return false;
-  }
-
-  try {
-    const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const notification = new Notification(`🌊 Alerta de Prueba - ${portName}`, {
-      body: `Notificaciones activas a las ${nowStr}. Recibirás alertas automáticas para las pleamares y bajamares de tus puertos favoritos.`,
-      icon: '/favicon.ico',
-      tag: 'tide-test-alert',
+/**
+ * Sends a direct local notification if permission is granted.
+ */
+export function sendTestNotification(portName: string): boolean {
+  if (getNotificationPermission() === 'granted') {
+    new Notification('Mareas Pro: Prueba de Alerta', {
+      body: `Notificaciones activadas correctamente para ${portName}. Recibirás avisos antes de las pleamares y bajamares.`,
+      icon: '/favicon.svg' // Provide a real icon path if available
     });
-
-    notification.onclick = () => {
-      window.focus();
-      notification.close();
-    };
-
     return true;
-  } catch (e) {
-    console.error('Error sending test notification:', e);
-    return false;
+  }
+  return false;
+}
+
+export function sendRealNotification(title: string, body: string) {
+  if (getNotificationPermission() === 'granted') {
+    new Notification(title, { body, icon: '/favicon.svg' });
   }
 }
 
 /**
- * Calculates upcoming scheduled alerts for subscribed ports for today based on settings.
+ * Generates the list of scheduled alerts for *today* based on the user's settings
+ * and subscribed ports.
+ * 
+ * Note: In a real PWA with a Service Worker, this logic would run in the background.
+ * For this browser-only demo, we just calculate the times to display them in the UI.
  */
 export function getScheduledAlertsForToday(
   subscribedPortIds: string[],
   settings: NotificationSettings,
-  units: UserUnits,
-  now: Date = new Date()
+  units: UserUnits
 ): ScheduledAlert[] {
-  if (!settings.enabled) return [];
+  if (!settings.enabled || subscribedPortIds.length === 0) return [];
 
   const alerts: ScheduledAlert[] = [];
-  const portsToSearch = PORTS_DATABASE.filter(p => subscribedPortIds.includes(p.id));
+  const now = new Date();
 
-  portsToSearch.forEach(port => {
-    const dayData = getTideDayData(port, now, now.getTime());
-    const isMareaViva = dayData.coefficient >= 80;
+  subscribedPortIds.forEach(portId => {
+    const port = PORTS_DATABASE.find(p => p.id === portId);
+    if (!port) return;
 
-    dayData.highLows.forEach(hl => {
-      const isPleamar = hl.type === 'pleamar';
-      const isBajamar = hl.type === 'bajamar';
+    // We calculate the tide data for "today" in the port's local timezone
+    // to find today's high/low events.
+    const todayData = calculateTideDayData(port, now);
 
-      // Check settings filters
-      if (isPleamar && !settings.notifyPleamar) return;
-      if (isBajamar && !settings.notifyBajamar) return;
-      if (isMareaViva && !settings.notifyMareasVivas && !settings.notifyPleamar && !settings.notifyBajamar) return;
+    // Apply filters
+    if (settings.notifyMareasVivas && todayData.coefficient < 80) {
+      return; // Skip this port today if setting is on and coef is low
+    }
 
-      // Calculate scheduled alert time (subtract alertTimingMinutes)
-      const tideTime = new Date(hl.timestamp);
-      const alertTime = new Date(tideTime.getTime() - settings.alertTimingMinutes * 60 * 1000);
+    todayData.highLows.forEach(hl => {
+      if (hl.type === 'pleamar' && !settings.notifyPleamar) return;
+      if (hl.type === 'bajamar' && !settings.notifyBajamar) return;
 
-      const alertTimeStr = formatZonedHHMM(alertTime.getTime(), port.timezone);
+      // Calculate alert time
+      const [h, m] = hl.time.split(':').map(Number);
+      
+      // We need to subtract alertTimingMinutes from the event time
+      let alertMin = m - settings.alertTimingMinutes;
+      let alertHour = h;
+      
+      while (alertMin < 0) {
+        alertMin += 60;
+        alertHour -= 1;
+      }
+      
+      // If alert time goes to previous day, we skip it for simplicity in this UI list
+      if (alertHour < 0) return;
+
+      const alertTimeStr = `${String(alertHour).padStart(2,'0')}:${String(alertMin).padStart(2,'0')}`;
 
       alerts.push({
-        id: `${port.id}_${hl.type}_${hl.time}`,
+        id: `${port.id}-${hl.time}-${hl.type}`,
         portId: port.id,
-        portName: port.name,
+        portName: port.name.split(' (')[0],
         tideType: hl.type,
         timeStr: hl.time,
         scheduledAlertTimeStr: alertTimeStr,
         heightMeters: hl.height,
-        coefficient: dayData.coefficient,
-        timestamp: hl.timestamp,
+        coefficient: todayData.coefficient
       });
     });
   });
 
-  // Sort by timestamp
-  return alerts.sort((a, b) => a.timestamp - b.timestamp);
-}
+  // Sort alerts by alert time chronologically
+  alerts.sort((a, b) => a.scheduledAlertTimeStr.localeCompare(b.scheduledAlertTimeStr));
 
-/**
- * Check if any alert needs to be sent right now
- */
-export function checkAndTriggerTideAlerts(
-  subscribedPortIds: string[],
-  settings: NotificationSettings,
-  units: UserUnits,
-  onSelectPort?: (port: Port) => void
-) {
-  if (typeof window === 'undefined' || !('Notification' in window)) return;
-  if (Notification.permission !== 'granted' || !settings.enabled) return;
-
-  const now = new Date();
-  const nowMs = now.getTime();
-  const portsToSearch = PORTS_DATABASE.filter(p => subscribedPortIds.includes(p.id));
-
-  portsToSearch.forEach(port => {
-    const dayData = getTideDayData(port, now, nowMs);
-
-    dayData.highLows.forEach(hl => {
-      const isPleamar = hl.type === 'pleamar';
-      const isBajamar = hl.type === 'bajamar';
-
-      if (isPleamar && !settings.notifyPleamar) return;
-      if (isBajamar && !settings.notifyBajamar) return;
-
-      // Target notification timestamp
-      const targetAlertMs = hl.timestamp - settings.alertTimingMinutes * 60 * 1000;
-      const diffMinutes = (nowMs - targetAlertMs) / (1000 * 60);
-
-      // Trigger if we are within 0 to 2 minutes after the target alert time
-      if (diffMinutes >= 0 && diffMinutes <= 2) {
-        const dateKey = now.toISOString().split('T')[0];
-        const alertSessionKey = `tablademarea_alert_sent_${port.id}_${hl.type}_${dateKey}_${hl.time}`;
-
-        // Check if already sent today
-        if (!sessionStorage.getItem(alertSessionKey)) {
-          sessionStorage.setItem(alertSessionKey, 'true');
-
-          const iconEmoji = isPleamar ? '📈' : '📉';
-          const title = `${iconEmoji} Alerta de ${isPleamar ? 'Pleamar' : 'Bajamar'}: ${port.name}`;
-          const timingNotice = settings.alertTimingMinutes > 0 
-            ? `En ${settings.alertTimingMinutes} minutos (${hl.time}h)` 
-            : `¡AHORA a las ${hl.time}h!`;
-
-          const body = `${isPleamar ? 'Pleamar (Marea Alta)' : 'Bajamar (Marea Baja)'} estimada: ${timingNotice}. Altura de agua: ${formatHeight(hl.height, units)} (Coeficiente: ${dayData.coefficient}).`;
-
-          try {
-            const notification = new Notification(title, {
-              body,
-              icon: '/favicon.ico',
-              tag: `tide-${port.id}-${hl.type}`,
-            });
-
-            notification.onclick = () => {
-              window.focus();
-              if (onSelectPort) {
-                onSelectPort(port);
-              }
-              notification.close();
-            };
-          } catch (err) {
-            console.error('Failed to display tide notification:', err);
-          }
-        }
-      }
-    });
-  });
+  return alerts;
 }

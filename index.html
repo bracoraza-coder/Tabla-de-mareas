@@ -1,7 +1,27 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" class="dark">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (function() {
+        try {
+          var realFetch = window.fetch;
+          var activeFetch = realFetch;
+          Object.defineProperty(window, 'fetch', {
+            get: function() {
+              return activeFetch;
+            },
+            set: function(fn) {
+              activeFetch = fn;
+            },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          // ignore if already configurable
+        }
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- ===== SEO principal ===== -->
@@ -22,6 +42,9 @@
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#0284c7" />
 
+    <!-- ===== Leaflet CSS ===== -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
     <!-- ===== Open Graph (Facebook, WhatsApp, LinkedIn...) ===== -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Tabla de Mareas Pro" />
@@ -38,41 +61,6 @@
     <meta name="twitter:title" content="Tabla de Mareas y Previsión de Surf Pro | Olas, Swell y Viento en Tiempo Real" />
     <meta name="twitter:description" content="Mareas y previsión de surf en tiempo real: swell, periodo de ola, viento y puntuación de sesión, con datos gratuitos y actualizados." />
     <meta name="twitter:image" content="https://tabla-de-mareas.vercel.app/og-image.png" />
-
-    <!-- ===== Datos estructurados (Schema.org) para resultados enriquecidos ===== -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "Tabla de Mareas Pro",
-      "url": "https://tabla-de-mareas.vercel.app/",
-      "description": "Tabla de mareas y previsión de surf interactiva: pleamar, bajamar, swell, periodo de ola, viento, gráfico solunar y datos astronómicos para puertos y costas.",
-      "applicationCategory": "UtilitiesApplication",
-      "operatingSystem": "Any",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "EUR"
-      },
-      "inLanguage": "es"
-    }
-    </script>
-
-    <script>
-      (function() {
-        try {
-          var _fetch = window.fetch;
-          Object.defineProperty(window, 'fetch', {
-            get: function() { return _fetch; },
-            set: function(fn) { _fetch = fn; },
-            configurable: true,
-            enumerable: true
-          });
-        } catch (e) {
-          console.warn('Fetch property fix skipped:', e);
-        }
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>

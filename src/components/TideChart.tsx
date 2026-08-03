@@ -1,398 +1,299 @@
-import React, { useState, useEffect } from 'react';
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ReferenceLine,
-  CartesianGrid,
-} from 'recharts';
-import { Waves, Clock, ArrowUpRight, ArrowDownRight, Radio } from 'lucide-react';
-import { TideDayData, Port, UserUnits } from '../types';
-import { getZonedFractionalHours, formatZonedHHMM, getUtcOffsetLabel, getZoneAbbreviation } from '../utils/timezoneHelpers';
+import React, { useMemo, useState, useRef } from 'react';
+import { TideDayData, UserUnits, Port } from '../types';
+import { Sunrise, Sunset, MousePointer2, Navigation } from 'lucide-react';
 
 interface TideChartProps {
-  dayData: TideDayData;
-  port: Port;
+  data: TideDayData;
   units: UserUnits;
+  port: Port;
 }
 
-export const TideChart: React.FC<TideChartProps> = ({
-  dayData,
-  port,
-  units,
-}) => {
-  const [hoursRange, setHoursRange] = useState<24 | 48>(24);
-  const [isMobile, setIsMobile] = useState(false);
+export const TideChart: React.FC<TideChartProps> = ({ data, units, port }) => {
+  const chartHeight = 220; // Internal SVG coord space
+  const chartWidth = 1000;
+  const svgRef = useRef<SVGSVGElement>(null);
+  
+  const [hoverData, setHoverData] = useState<{
+    x: number;
+    time: string;
+    height: number;
+  } | null>(null);
 
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
+  // Ensure we have curve points
+  const points = data.curvePoints || [];
+  
+  // Find min/max for scaling
+  const minHeight = Math.min(...points.map(p => p.height), 0); // floor at 0 for visual grounding
+  const maxHeight = Math.max(...points.map(p => p.height), port.baseHeight + port.amplitude);
+  const heightRange = (maxHeight - minHeight) || 1;
 
-  const formatHeight = (meters: number) => {
-    if (units.height === 'ft') {
-      return (meters * 3.28084).toFixed(2);
-    }
-    return meters.toFixed(2);
+  // X scaling (0 to 24 hours mapped to 0 to chartWidth)
+  const getX = (timeStr: string) => {
+    const [h, m] = timeStr.split(':').map(Number);
+    const decimalHours = h + m / 60;
+    return (decimalHours / 24) * chartWidth;
   };
 
-  const heightUnitLabel = units.height === 'ft' ? 'ft' : 'm';
+  // Y scaling (invert Y because SVG 0 is at the top)
+  const getY = (height: number) => {
+    const paddingTop = 30;
+    const paddingBottom = 20;
+    const availableHeight = chartHeight - paddingTop - paddingBottom;
+    const normalizedHeight = (height - minHeight) / heightRange;
+    return chartHeight - paddingBottom - (normalizedHeight * availableHeight);
+  };
 
-  // Prepare chart data & merge exact High/Low tide timestamps
-  const highLowMap = new Map<string, { type: 'pleamar' | 'bajamar'; height: number; time: string }>();
-  dayData.highLows.forEach(hl => {
-    highLowMap.set(hl.time, hl);
-  });
-
-  const basePoints = dayData.hourlyPoints.map(pt => {
-    const heightVal = units.height === 'ft' ? pt.height * 3.28084 : pt.height;
-    const hl = highLowMap.get(pt.time);
-    return {
-      time: pt.time,
-      height: Math.round(heightVal * 100) / 100,
-      timestamp: pt.timestamp,
-      isHighLow: !!hl,
-      highLowType: hl?.type,
-    };
-  });
-
-  // Inject exact High/Low points if not already on exact hourly/half-hourly ticks
-  dayData.highLows.forEach(hl => {
-    if (!basePoints.some(p => p.time === hl.time)) {
-      const heightVal = units.height === 'ft' ? hl.height * 3.28084 : hl.height;
-      basePoints.push({
-        time: hl.time,
-        height: Math.round(heightVal * 100) / 100,
-        timestamp: hl.timestamp,
-        isHighLow: true,
-        highLowType: hl.type,
-      });
+  // Generate SVG Path
+  const d = useMemo(() => {
+    if (points.length === 0) return '';
+    let path = `M ${getX(points[0].time)} ${getY(points[0].height)}`;
+    for (let i = 1; i < points.length; i++) {
+       path += ` L ${getX(points[i].time)} ${getY(points[i].height)}`;
     }
-  });
+    return path;
+  }, [points, minHeight, maxHeight]);
 
-  // Chronologically sorted chart data
-  const chartData = basePoints.sort((a, b) => a.timestamp - b.timestamp);
+  // Create area fill path (closes the curve to the bottom axis)
+  const dArea = useMemo(() => {
+    if (!d) return '';
+    return `${d} L ${chartWidth} ${chartHeight} L 0 ${chartHeight} Z`;
+  }, [d]);
 
-  // Give the Y axis extra headroom above/below the real min/max so that the
-  // high/low tide time badges (which float above/below their dot) always
-  // have room to render fully inside the chart's drawing area, instead of
-  // being clipped by the SVG canvas edge when a peak sits right at the top
-  // or bottom of the curve.
-  const heightValues = chartData.map(d => d.height);
-  const dataMinHeight = heightValues.length ? Math.min(...heightValues) : 0;
-  const dataMaxHeight = heightValues.length ? Math.max(...heightValues) : 1;
-  const heightRange = dataMaxHeight - dataMinHeight || 1;
-  const yAxisPadding = Math.max(heightRange * 0.22, 0.35);
-  const yAxisDomain: [number, number] = [
-    Math.round((dataMinHeight - yAxisPadding) * 100) / 100,
-    Math.round((dataMaxHeight + yAxisPadding) * 100) / 100,
-  ];
+  const formatH = (meters: number) => {
+     if (units.height === 'ft') return `${(meters * 3.28084).toFixed(2)}ft`;
+     return `${meters.toFixed(2)}m`;
+  };
 
-  // Current time finding - using the PORT'S own local time, not the
-  // visitor's browser clock, so the "AHORA" marker lands on the right
-  // point of the curve regardless of where in the world the visitor is.
+  // Time grid lines (every 3 hours)
+  const timeGrid = [0, 3, 6, 9, 12, 15, 18, 21, 24];
+
+  // Current time line
   const now = new Date();
-  const nowMs = now.getTime();
-  const portFractionalHours = getZonedFractionalHours(nowMs, port.timezone);
-  const currentMinutesTotal = portFractionalHours * 60;
+  const options = { timeZone: port.timezone, hour12: false, hour: '2-digit', minute: '2-digit' } as const;
+  const formatter = new Intl.DateTimeFormat('en-GB', options);
+  const nowTimeStr = formatter.format(now);
+  const optionsDate = { timeZone: port.timezone, year: 'numeric', month: '2-digit', day: '2-digit' } as const;
+  const dateParts = new Intl.DateTimeFormat('en-CA', optionsDate).formatToParts(now);
+  const todayYMD = `${dateParts.find(p=>p.type==='year')?.value}-${dateParts.find(p=>p.type==='month')?.value}-${dateParts.find(p=>p.type==='day')?.value}`;
+  
+  const isToday = !data.dateStr || data.dateStr === todayYMD;
+  const currentX = isToday ? getX(nowTimeStr) : -1;
 
-  const currentPoint = chartData.length > 0
-    ? chartData.reduce((prev, curr) => {
-        const [pH, pM] = prev.time.split(':').map(Number);
-        const [cH, cM] = curr.time.split(':').map(Number);
-        const prevDiff = Math.abs((pH * 60 + (pM || 0)) - currentMinutesTotal);
-        const currDiff = Math.abs((cH * 60 + (cM || 0)) - currentMinutesTotal);
-        return currDiff < prevDiff ? curr : prev;
-      }, chartData[0])
-    : null;
+  // Mouse / Touch interaction handler
+  const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (!svgRef.current || points.length === 0) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const clientX = e.clientX - rect.left;
+    const ratio = Math.max(0, Math.min(1, clientX / rect.width));
+    const targetX = ratio * chartWidth;
 
-  // Custom Recharts Dot renderer for Live Position and Exact High/Low Tides
-  const renderCustomDot = (dotProps: any) => {
-    const { cx, cy, payload } = dotProps;
-    if (!payload || cx == null || cy == null) return null;
+    // Find closest curve point
+    let closest = points[0];
+    let minDiff = Infinity;
+    for (const p of points) {
+      const px = getX(p.time);
+      const diff = Math.abs(px - targetX);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closest = p;
+      }
+    }
 
-    const isLiveNow = currentPoint && payload.time === currentPoint.time;
-    const isHighLow = !!payload.isHighLow;
-
-    if (!isLiveNow && !isHighLow) return null;
-
-    const nowTimeStr = formatZonedHHMM(nowMs, port.timezone);
-
-    // When "now" happens to land on (or very near) an actual high/low tide
-    // point - which happens often, since a real tide event is exactly the
-    // kind of moment people check - both badges need to render. Otherwise
-    // the live marker silently swallows the tide time label underneath it.
-    const liveBadgeYOffset = isHighLow ? -46 : -26;
-
-    return (
-      <g key={`dot-${payload.time}`}>
-        {isLiveNow && (
-          <g>
-            <circle cx={cx} cy={cy} r={16} className="fill-emerald-400 opacity-70 animate-ping" />
-            <circle cx={cx} cy={cy} r={9} className="fill-emerald-500 opacity-50 animate-pulse" />
-            <circle cx={cx} cy={cy} r={5.5} fill="#22c55e" stroke="#ffffff" strokeWidth={2} />
-            <g transform={`translate(${cx}, ${cy + liveBadgeYOffset})`}>
-              <rect x="-46" y="-12" width="92" height="21" rx="5" fill="#022c22" stroke="#10b981" strokeWidth="1.5" />
-              <text x="0" y="2" textAnchor="middle" fill="#34d399" fontSize="10" fontWeight="bold" fontFamily="monospace">
-                AHORA {nowTimeStr}h
-              </text>
-            </g>
-          </g>
-        )}
-
-        {isHighLow && (() => {
-          const isPleamar = payload.highLowType === 'pleamar';
-          const formattedHeight = `${payload.height}${heightUnitLabel}`;
-          const baseYOffset = isPleamar ? -20 : 20;
-          const badgeBg = isPleamar ? '#1e3a8a' : '#451a03';
-          const badgeBorder = isPleamar ? '#3b82f6' : '#f59e0b';
-          const textColor = isPleamar ? '#bfdbfe' : '#fef08a';
-          const arrowSymbol = isPleamar ? '▲' : '▼';
-          const labelText = `${arrowSymbol} ${payload.time}h (${formattedHeight})`;
-          const textLen = labelText.length;
-          const badgeWidth = Math.max(70, textLen * 5.7 + 8);
-          const halfWidth = badgeWidth / 2;
-
-          if (!isLiveNow) {
-            return (
-              <>
-                <circle cx={cx} cy={cy} r={4.5} fill={isPleamar ? '#3b82f6' : '#f59e0b'} stroke="#ffffff" strokeWidth={1.8} />
-                <g transform={`translate(${cx}, ${cy + baseYOffset})`}>
-                  <rect x={-halfWidth} y="-9" width={badgeWidth} height="18" rx="4" fill={badgeBg} stroke={badgeBorder} strokeWidth="1" opacity="0.95" />
-                  <text x="0" y="3" textAnchor="middle" fill={textColor} fontSize="9.5" fontWeight="bold" fontFamily="sans-serif">
-                    {labelText}
-                  </text>
-                </g>
-              </>
-            );
-          }
-          // Both markers on the same point: push the tide badge further out
-          // (below the pulsing live dot) so it never overlaps the "AHORA" box.
-          const sharedYOffset = isPleamar ? -70 : 30;
-          return (
-            <g transform={`translate(${cx}, ${cy + sharedYOffset})`}>
-              <rect x={-halfWidth} y="-9" width={badgeWidth} height="18" rx="4" fill={badgeBg} stroke={badgeBorder} strokeWidth="1" opacity="0.95" />
-              <text x="0" y="3" textAnchor="middle" fill={textColor} fontSize="9.5" fontWeight="bold" fontFamily="sans-serif">
-                {labelText}
-              </text>
-            </g>
-          );
-        })()}
-      </g>
-    );
+    setHoverData({
+      x: getX(closest.time),
+      time: closest.time,
+      height: closest.height
+    });
   };
 
-  // Custom Recharts Tooltip
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      const isNow = data.time === currentPoint?.time;
-      return (
-        <div className="bg-slate-900 border border-cyan-700/80 p-3 rounded-xl shadow-2xl text-xs space-y-1">
-          <div className="flex items-center justify-between gap-3 text-cyan-300 font-bold border-b border-slate-800 pb-1">
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" />
-              <span>Hora: {label} h</span>
-            </div>
-            {isNow && (
-              <span className="text-[9px] bg-emerald-950 text-emerald-300 px-1.5 py-0.5 rounded font-mono border border-emerald-700">
-                AQUÍ AHORA
-              </span>
-            )}
-          </div>
-          <div className="text-white text-base font-black font-mono">
-            Marea: {data.height} {heightUnitLabel}
-          </div>
-          <div className="text-slate-400 text-[11px]">
-            Puerto: {port.name}
-          </div>
-        </div>
-      );
-    }
-    return null;
+  const handlePointerLeave = () => {
+    setHoverData(null);
   };
 
   return (
-    <div id="tide-chart-section" className="bg-slate-900 border border-slate-800 border-l-4 border-l-blue-600 rounded-2xl p-5 shadow-2xl scroll-mt-24">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Waves className="w-5 h-5 text-blue-400" />
-            <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-              Gráfico de Mareas
-              <span className="text-[10px] bg-blue-950 text-blue-300 border border-blue-800 px-2 py-0.5 rounded font-mono font-bold">HOY {dayData.dateStr}</span>
-            </h2>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/80 font-mono shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block"></span>
-              <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
-              <span>POSICIÓN ACTUAL {currentPoint ? `(${currentPoint.time}h)` : ''}</span>
-            </div>
-          </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Curva hidrométrica armónica continua con indicador temporal en vivo (punto verde parpadeante) · Todas las horas en <strong className="text-slate-300">hora local de {port.name.split(' (')[0]}</strong> ({getZoneAbbreviation(Date.now(), port.timezone)}, {getUtcOffsetLabel(Date.now(), port.timezone)})
-          </p>
-          {dayData.tideSource === 'IHM' ? (
-            <p className="text-[11px] text-emerald-400/90 mt-1 flex items-center gap-1">
-              <span>✓</span>
-              <span>
-                Horarios de pleamar/bajamar de la estación oficial <strong className="text-emerald-300">{dayData.tideSourceDetail || 'IHM'}</strong> (Instituto Hidrográfico de la Marina). La curva entre puntos es una interpolación visual.
-              </span>
-            </p>
-          ) : (
-            <p className="text-[11px] text-amber-400/90 mt-1 flex items-center gap-1">
-              <span>⚠</span>
-              <span>
-                Modelo astronómico de aproximación, no oficial. Verifica siempre los horarios en la{' '}
-                <a
-                  href="https://armada.defensa.gob.es/ihm"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline text-amber-300 hover:text-amber-200"
-                >
-                  web oficial del Instituto Hidrográfico de la Marina
-                </a>
-                {' '}antes de cualquier actividad donde la precisión sea crítica.
-              </span>
-            </p>
-          )}
-        </div>
-
-        {/* Range Controls & Legend */}
-        <div className="flex items-center gap-3 text-xs">
-          <div className="flex gap-2 text-xs font-bold">
-            <span className="px-2.5 py-1 bg-blue-950 text-blue-300 border border-blue-800 rounded">PLEAMAR</span>
-            <span className="px-2.5 py-1 bg-slate-950 text-slate-400 border border-slate-800 rounded">BAJAMAR</span>
-          </div>
-
-          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
-            <button
-              onClick={() => setHoursRange(24)}
-              className={`px-2.5 py-1 rounded font-bold text-[11px] transition-colors cursor-pointer ${
-                hoursRange === 24 ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              24H
-            </button>
-            <button
-              onClick={() => setHoursRange(48)}
-              className={`px-2.5 py-1 rounded font-bold text-[11px] transition-colors cursor-pointer ${
-                hoursRange === 48 ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              48H
-            </button>
-          </div>
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4 scroll-mt-28" id="tide-chart-section">
+      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+        <h3 className="font-bold text-white uppercase text-xs tracking-wider flex items-center gap-2">
+          Gráfica de Mareas Interactivas
+          <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded normal-case font-mono">
+            {data.dateStr}
+          </span>
+        </h3>
+        <div className="flex items-center gap-3 text-[10px] font-mono text-slate-400">
+          <div className="flex items-center gap-1"><Sunrise className="w-3.5 h-3.5 text-amber-400" /> {data.sunrise}</div>
+          <div className="flex items-center gap-1"><Sunset className="w-3.5 h-3.5 text-orange-500" /> {data.sunset}</div>
         </div>
       </div>
 
-      {/* Main Recharts Area Chart */}
-      <div className="w-full h-[24rem] sm:h-80 bg-slate-950 rounded-xl p-0.5 sm:p-4 border border-slate-800 relative">
+      {/* Mobile Touch Scroll Banner Hint */}
+      <div className="sm:hidden flex items-center justify-between bg-cyan-950/60 border border-cyan-800/60 px-3 py-1.5 rounded-xl text-[11px] text-cyan-300 font-mono">
+        <span className="flex items-center gap-1.5">
+          <Navigation className="w-3.5 h-3.5 animate-pulse text-cyan-400" />
+          Desliza lateralmente para navegar las 24 horas
+        </span>
+        <span className="text-[10px] text-slate-400 font-bold">00:00 → 24:00</span>
+      </div>
+
+      {/* SVG Chart Container */}
+      <div className="relative w-full rounded-2xl bg-slate-950 border border-slate-800 shadow-inner overflow-hidden p-1 sm:p-2">
+        <div className="w-full overflow-x-auto overflow-y-hidden touch-pan-x custom-scrollbar">
+          <div className="min-w-[680px] sm:min-w-full h-52 sm:h-72 relative cursor-crosshair group">
         
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={chartData}
-            margin={isMobile ? { top: 50, right: 28, left: -18, bottom: 22 } : { top: 56, right: 44, left: -2, bottom: 26 }}
-          >
-            <defs>
-              <linearGradient id="tideGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.95} />
-                <stop offset="18%" stopColor="#3b82f6" stopOpacity={0.75} />
-                <stop offset="55%" stopColor="#1d4ed8" stopOpacity={0.35} />
-                <stop offset="100%" stopColor="#1e3a8a" stopOpacity={0.06} />
-              </linearGradient>
-              <linearGradient id="tideStroke" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#93c5fd" />
-                <stop offset="100%" stopColor="#3b82f6" />
-              </linearGradient>
-              <filter id="tideDepth" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#000000" floodOpacity="0.45" />
-              </filter>
-            </defs>
+        {/* Interaction hint overlay when not hovering */}
+        {!hoverData && (
+          <div className="absolute top-2 right-2 pointer-events-none z-20">
+            <div className="bg-slate-900/90 backdrop-blur-sm border border-slate-700 px-2.5 py-1 rounded-lg text-[11px] text-cyan-300 font-mono flex items-center gap-1.5 shadow-md">
+              <MousePointer2 className="w-3 h-3 text-cyan-400 animate-pulse" />
+              Pasa el cursor / toca para ver altura exacta
+            </div>
+          </div>
+        )}
 
-            <CartesianGrid strokeDasharray="4 4" stroke="#1e293b" vertical={false} />
+        <svg 
+          ref={svgRef}
+          viewBox={`0 0 ${chartWidth} ${chartHeight}`} 
+          preserveAspectRatio="none" 
+          className="w-full h-full relative z-10 overflow-visible"
+          onPointerMove={handlePointerMove}
+          onPointerLeave={handlePointerLeave}
+        >
+          <defs>
+             <linearGradient id="waterFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.45" />
+                <stop offset="100%" stopColor="#0369a1" stopOpacity="0.05" />
+             </linearGradient>
+             
+             <linearGradient id="nightFill" x1="0" y1="0" x2="1" y2="0">
+               <stop offset="0%" stopColor="#0f172a" stopOpacity="0.6"/>
+               <stop offset="100%" stopColor="#0f172a" stopOpacity="0.6"/>
+             </linearGradient>
+          </defs>
 
-            <XAxis
-              dataKey="time"
-              stroke="#64748b"
-              fontSize={isMobile ? 10 : 11}
-              tickLine={false}
-              interval={isMobile ? 5 : 3}
-              padding={{ left: isMobile ? 16 : 22, right: isMobile ? 16 : 22 }}
-              angle={isMobile ? -35 : 0}
-              textAnchor={isMobile ? 'end' : 'middle'}
-              height={isMobile ? 34 : 24}
-            />
+          {/* Background Night/Day Shading */}
+          <rect x="0" y="0" width={getX(data.sunrise)} height={chartHeight} fill="url(#nightFill)" />
+          <rect x={getX(data.sunset)} y="0" width={chartWidth - getX(data.sunset)} height={chartHeight} fill="url(#nightFill)" />
 
-            <YAxis
-              stroke="#64748b"
-              fontSize={isMobile ? 10 : 11}
-              tickLine={false}
-              unit={` ${heightUnitLabel}`}
-              domain={yAxisDomain}
-              width={isMobile ? 44 : 60}
-            />
+          {/* X Grid (Time) */}
+          {timeGrid.map(h => (
+            <g key={h}>
+              <line x1={getX(`${h}:00`)} y1="0" x2={getX(`${h}:00`)} y2={chartHeight} stroke="#334155" strokeWidth="1" strokeDasharray="4 4" />
+              <text x={getX(`${h}:00`)} y={chartHeight - 4} fill="#64748b" fontSize="11" fontFamily="monospace" textAnchor={h === 0 ? "start" : h === 24 ? "end" : "middle"}>
+                {h}h
+              </text>
+            </g>
+          ))}
 
-            <Tooltip content={<CustomTooltip />} />
+          {/* Area under curve */}
+          <path d={dArea} fill="url(#waterFill)" />
+          
+          {/* The main tide curve */}
+          <path d={d} fill="none" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
 
-            {/* Current Time Indicator Vertical Line */}
-            {currentPoint && (
-              <ReferenceLine
-                x={currentPoint.time}
-                stroke="#22c55e"
-                strokeWidth={2}
-                strokeDasharray="3 3"
+          {/* High/Low Markers */}
+          {data.highLows.map((hl, i) => {
+            const isHigh = hl.type === 'pleamar';
+            const cx = getX(hl.time);
+            const cy = getY(hl.height);
+            return (
+              <g key={i}>
+                <line x1={cx} y1={cy} x2={cx} y2={cy + (isHigh ? -25 : 25)} stroke={isHigh ? '#60a5fa' : '#fbbf24'} strokeWidth="1" strokeDasharray="2 2" />
+                <circle cx={cx} cy={cy} r="4" fill="#0f172a" stroke={isHigh ? '#60a5fa' : '#fbbf24'} strokeWidth="2" />
+                
+                {/* Labels box */}
+                <rect 
+                  x={cx - 30} 
+                  y={cy + (isHigh ? -45 : 15)} 
+                  width="60" 
+                  height="30" 
+                  rx="4" 
+                  fill="#1e293b" 
+                  stroke={isHigh ? '#1e3a8a' : '#78350f'} 
+                  strokeWidth="1" 
+                />
+                <text x={cx} y={cy + (isHigh ? -32 : 28)} fill="#e2e8f0" fontSize="11" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
+                  {hl.time}
+                </text>
+                <text x={cx} y={cy + (isHigh ? -20 : 40)} fill={isHigh ? '#93c5fd' : '#fcd34d'} fontSize="10" fontFamily="monospace" textAnchor="middle">
+                  {formatH(hl.height)}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Current Time Line */}
+          {isToday && currentX >= 0 && currentX <= chartWidth && (
+            <g>
+              <line x1={currentX} y1="0" x2={currentX} y2={chartHeight} stroke="#10b981" strokeWidth="2" strokeDasharray="4 2" />
+              <rect x={currentX - 25} y="4" width="50" height="20" rx="4" fill="#10b981" />
+              <text x={currentX} y="17" fill="#0f172a" fontSize="10" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
+                AHORA
+              </text>
+              <circle cx={currentX} cy={getY(data.currentWaterHeight)} r="5" fill="#10b981" stroke="#ffffff" strokeWidth="1.5" />
+            </g>
+          )}
+
+          {/* Hover / Pointer Interactive Tooltip Marker */}
+          {hoverData && (
+            <g>
+              <line 
+                x1={hoverData.x} 
+                y1="0" 
+                x2={hoverData.x} 
+                y2={chartHeight} 
+                stroke="#38bdf8" 
+                strokeWidth="1.5" 
+                strokeDasharray="2 2" 
               />
-            )}
+              <circle 
+                cx={hoverData.x} 
+                cy={getY(hoverData.height)} 
+                r="6" 
+                fill="#38bdf8" 
+                stroke="#0f172a" 
+                strokeWidth="2" 
+              />
+              <circle 
+                cx={hoverData.x} 
+                cy={getY(hoverData.height)} 
+                r="10" 
+                fill="none" 
+                stroke="#38bdf8" 
+                strokeWidth="1" 
+                className="animate-ping" 
+              />
 
-            <Area
-              type="monotone"
-              dataKey="height"
-              stroke="url(#tideStroke)"
-              strokeWidth={isMobile ? 3.5 : 3}
-              fillOpacity={1}
-              fill="url(#tideGradient)"
-              style={{ filter: 'url(#tideDepth)' }}
-              dot={renderCustomDot}
-              activeDot={{ r: 7, fill: '#60a5fa', stroke: '#ffffff', strokeWidth: 2 }}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+              {/* Hover Badge */}
+              <g transform={`translate(${Math.min(chartWidth - 110, Math.max(10, hoverData.x - 50))}, ${Math.max(10, getY(hoverData.height) - 45)})`}>
+                <rect 
+                  width="100" 
+                  height="36" 
+                  rx="6" 
+                  fill="#0284c7" 
+                  stroke="#38bdf8" 
+                  strokeWidth="1" 
+                />
+                <text x="50" y="15" fill="#ffffff" fontSize="11" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
+                  {hoverData.time} h
+                </text>
+                <text x="50" y="29" fill="#e0f2fe" fontSize="11" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
+                  {formatH(hoverData.height)}
+                </text>
+              </g>
+            </g>
+          )}
 
+        </svg>
+          </div>
+        </div>
       </div>
 
-      {/* High and Low Tide Point Indicators below chart */}
-      <div className="mt-4 pt-3 border-t border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-        {dayData.highLows.map((hl, idx) => (
-          <div
-            key={idx}
-            className="bg-slate-950 border border-slate-800 rounded-lg p-2.5 flex items-center justify-between"
-          >
-            <div className="flex items-center gap-1.5">
-              {hl.type === 'pleamar' ? (
-                <div className="p-1 bg-blue-950 text-blue-400 border border-blue-800 rounded">
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                </div>
-              ) : (
-                <div className="p-1 bg-slate-900 text-amber-400 border border-slate-800 rounded">
-                  <ArrowDownRight className="w-3.5 h-3.5" />
-                </div>
-              )}
-              <div>
-                <div className="text-[10px] text-slate-400 uppercase font-bold">{hl.type}</div>
-                <div className="font-bold text-white font-mono">{hl.time} h</div>
-              </div>
-            </div>
-            <span className="font-mono font-bold text-blue-300 text-sm">
-              {formatHeight(hl.height)} {heightUnitLabel}
-            </span>
-          </div>
-        ))}
+      <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-800">
+         <div className="flex items-center gap-3">
+           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400"></span> Pleamares</span>
+           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400"></span> Bajamares</span>
+           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400"></span> Hora Actual</span>
+         </div>
+         <div>Cero hidrográfico de {port.name}</div>
       </div>
 
     </div>

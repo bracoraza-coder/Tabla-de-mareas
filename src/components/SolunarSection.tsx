@@ -1,268 +1,242 @@
 import React from 'react';
-import { 
-  Fish, 
-  Sun, 
-  Moon, 
-  Star, 
-  Clock, 
-  Sparkles, 
-  Sunrise, 
-  Sunset, 
-  Compass, 
-  Award,
-  Zap
-} from 'lucide-react';
-import { SolunarData } from '../types';
-import { FishingDiagram } from './gauges/FishingDiagram';
-import { ActivityWaveChart } from './gauges/ActivityWaveChart';
+import { TideDayData, Port } from '../types';
+import { Fish, Moon, Sun, Star, Flame, Zap, Clock, Info, Anchor } from 'lucide-react';
 import { MoonPhaseDisc } from './gauges/WeatherGauges';
+import { ActivityWaveChart } from './gauges/ActivityWaveChart';
+import { FishingDiagram } from './gauges/FishingDiagram';
 
 interface SolunarSectionProps {
-  solunar: SolunarData;
-  dateStr: string;
+  dayData: TideDayData;
+  port: Port;
 }
 
-export const SolunarSection: React.FC<SolunarSectionProps> = ({
-  solunar,
-  dateStr,
-}) => {
-  const {
-    activityScore,
-    activityLabel,
-    majorPeriods,
-    minorPeriods,
-    sunrise,
-    solarNoon,
-    sunset,
-    dayLength,
-    moonrise,
-    moonset,
-    moonTransit,
-    moonPhaseName,
-    moonPhaseIcon,
-    moonIllumination,
-    moonAgeDays,
-  } = solunar;
+export const SolunarSection: React.FC<SolunarSectionProps> = ({ dayData, port }) => {
+  const { solunar, sunrise, sunset, highLows } = dayData;
+  const { moonPhaseName, illuminationPercent, isWaxing, majorPeriods, minorPeriods, activityScore } = solunar;
 
-  // Rating Stars Render
-  const renderStars = () => {
-    return Array.from({ length: 5 }).map((_, i) => (
-      <Star
-        key={i}
-        className={`w-5 h-5 ${
-          i < activityScore
-            ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]'
-            : 'text-slate-700'
-        }`}
-      />
-    ));
-  };
+  let scoreColor = 'text-slate-400';
+  let badgeBg = 'bg-slate-800 text-slate-300 border-slate-700';
+  let statusText = 'Actividad Normal';
+  let stars = 1;
+
+  if (activityScore >= 80) {
+    scoreColor = 'text-emerald-400';
+    badgeBg = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+    statusText = 'Día Épico de Pesca';
+    stars = 5;
+  } else if (activityScore >= 60) {
+    scoreColor = 'text-cyan-400';
+    badgeBg = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
+    statusText = 'Muy Favorable';
+    stars = 4;
+  } else if (activityScore >= 40) {
+    scoreColor = 'text-amber-400';
+    badgeBg = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+    statusText = 'Favorable';
+    stars = 3;
+  } else if (activityScore >= 20) {
+    scoreColor = 'text-orange-400';
+    badgeBg = 'bg-orange-500/20 text-orange-300 border-orange-500/40';
+    statusText = 'Actividad Baja';
+    stars = 2;
+  } else {
+    scoreColor = 'text-rose-400';
+    badgeBg = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+    statusText = 'Condición Pobre';
+    stars = 1;
+  }
 
   return (
-    <div className="bg-slate-900 border border-slate-800 border-l-4 border-l-amber-500 rounded-2xl p-5 shadow-2xl space-y-6">
+    <div className="bg-slate-900 border border-slate-800 border-l-4 border-l-amber-500 rounded-2xl p-4 sm:p-6 shadow-2xl space-y-6">
       
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-amber-400 shrink-0">
-            <Fish className="w-6 h-6" />
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+        <div>
+          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+            <Fish className="w-6 h-6 text-amber-400 shrink-0" />
+            Efemérides Solunares & Pronóstico de Pesca
+          </h2>
+          <p className="text-xs text-slate-400 mt-1">
+            Calculado con la Teoría Solunar de John Alden Knight para <strong className="text-slate-200">{port.name}</strong>
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold tracking-wide shadow-md ${badgeBg}`}>
+            {statusText}
+          </span>
+          <div className="flex gap-0.5 bg-slate-950 px-2.5 py-1.5 rounded-xl border border-slate-800">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Star
+                key={i}
+                className={`w-3.5 h-3.5 ${i < stars ? 'fill-amber-400 text-amber-400' : 'text-slate-700'}`}
+              />
+            ))}
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-              Tabla Solunar & Actividad de Pesca
-              <span className="text-xs font-mono font-bold bg-amber-950 text-amber-300 border border-amber-800 px-2.5 py-0.5 rounded">
-                {dateStr}
+        </div>
+      </div>
+
+      {/* Top 2 Summary Cards: Score & Moon Phase */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        
+        {/* Card 1: Fishing Activity Score */}
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-4 shadow-lg">
+          <div className="space-y-2">
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono">
+              Índice Solunar de Picada
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className={`text-4xl font-black ${scoreColor} font-mono tracking-tight`}>
+                {activityScore}%
               </span>
-            </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Horarios óptimos de alimentación marina según atracción gravitacional solar y lunar
+              <span className="text-xs text-slate-400 font-mono">/100</span>
+            </div>
+            <p className="text-xs text-slate-300 font-medium max-w-[200px]">
+              {activityScore >= 60
+                ? 'Picos de actividad intensos. Las especies estarán alimentándose activamente.'
+                : 'Actividad moderada. Se recomienda pescar durante los repuntes de marea.'}
             </p>
           </div>
-        </div>
 
-        {/* Solunar Activity Rating Box */}
-        <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center gap-4 shrink-0">
-          <div className="flex flex-col items-center">
-            <div className="flex items-center gap-1">{renderStars()}</div>
-            <span className="text-[10px] text-slate-500 font-bold uppercase mt-1 font-mono">ÍNDICE SOLUNAR</span>
-          </div>
-          <div className="border-l border-slate-800 pl-4">
-            <div className="text-base font-black text-amber-300 uppercase tracking-wide">
-              {activityLabel}
-            </div>
-            <div className="text-[11px] text-slate-400 font-mono">
-              Score: {activityScore}/5
-            </div>
+          <div className="w-24 h-24 shrink-0 bg-slate-900/60 rounded-xl p-1 border border-slate-800">
+            <FishingDiagram activityScore={activityScore} label={statusText} />
           </div>
         </div>
-      </div>
 
-      {/* Fish-o-meter: instant visual read of how good fishing is today */}
-      <div className="w-full aspect-[300/220] rounded-xl overflow-hidden border border-slate-800 shadow-lg">
-        <FishingDiagram activityScore={activityScore} label={activityLabel} />
-      </div>
-
-      {/* Curva de actividad del día, con los periodos mayores/menores marcados */}
-      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 sm:p-4">
-        <div className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Curva de Actividad del Día</div>
-        <ActivityWaveChart majorPeriods={majorPeriods} minorPeriods={minorPeriods} />
-      </div>
-
-      {/* Major & Minor Fishing Periods */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        
-        {/* Major Periods */}
-        <div className="bg-slate-950 border border-slate-800 border-l-4 border-l-emerald-500 rounded-xl p-4 relative">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-lg">
-                <Zap className="w-4 h-4" />
+        {/* Card 2: Moon Phase & Sun Info */}
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-4 shadow-lg">
+          <div className="space-y-2">
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono">
+              Fase Lunar & Orto Solar
+            </div>
+            <div>
+              <div className="text-lg font-bold text-white tracking-wide">{moonPhaseName}</div>
+              <div className="text-xs text-slate-400 font-mono mt-0.5">
+                Iluminación: <strong className="text-amber-300">{Math.round(illuminationPercent)}%</strong> ({isWaxing ? 'Creciente' : 'Menguante'})
               </div>
-              <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider font-mono">
-                Períodos Mayores (~2 horas)
+            </div>
+
+            <div className="flex items-center gap-4 text-xs font-mono pt-1">
+              <span className="flex items-center gap-1 text-amber-400">
+                <Sun className="w-3.5 h-3.5" /> Salida: {sunrise}
+              </span>
+              <span className="flex items-center gap-1 text-orange-400">
+                <Sun className="w-3.5 h-3.5" /> Puesta: {sunset}
               </span>
             </div>
-            <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded font-bold uppercase">
-              Máxima Actividad
+          </div>
+
+          <div className="w-20 h-20 shrink-0 drop-shadow-lg flex items-center justify-center">
+            <MoonPhaseDisc illuminationPercent={illuminationPercent} waxing={isWaxing} />
+          </div>
+        </div>
+
+      </div>
+
+      {/* MAIN FEATURE: Professional High-Visibility 24-Hour Solunar Chart */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-amber-400" />
+            <h3 className="text-sm font-bold text-white font-mono uppercase tracking-wider">
+              Gráfica de Actividad de 24 Horas
+            </h3>
+          </div>
+          <div className="text-xs text-slate-400 font-mono hidden sm:block">
+            Picos de picada previstos en 24h
+          </div>
+        </div>
+
+        <ActivityWaveChart
+          major={majorPeriods}
+          minor={minorPeriods}
+          sunrise={sunrise}
+          sunset={sunset}
+          highLows={highLows}
+        />
+      </div>
+
+      {/* Bottom Grid: Breakdown Cards for Major & Minor Periods */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        
+        {/* Major Periods */}
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
+              <Flame className="w-4 h-4 fill-amber-400" /> Períodos Mayores (Picada Máxima ≈2h)
+            </span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800">
+              Tránsito Lunar
             </span>
           </div>
 
-          <p className="text-xs text-slate-400 mb-3">
-            Ventanas principales de mayor intensidad en picadas de peces.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="space-y-2">
             {majorPeriods.map((p, idx) => (
-              <div key={idx} className="bg-slate-900 border border-slate-800 p-3 rounded-lg flex items-center justify-between">
-                <div>
-                  <div className="text-xs font-bold text-slate-200">{p.name}</div>
-                  <div className="text-xs text-emerald-400 font-bold font-mono flex items-center gap-1 mt-0.5">
-                    <Clock className="w-3 h-3" />
-                    <span>{p.start} - {p.end} h</span>
-                  </div>
+              <div
+                key={idx}
+                className="bg-slate-900 border border-amber-900/40 hover:border-amber-500/50 p-3 rounded-xl flex items-center justify-between transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  <span className="font-mono text-base font-bold text-white">{p.start} - {p.end}</span>
                 </div>
-                <span className="text-[10px] font-bold text-emerald-300 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
-                  EXCELENTE
+                <span className="text-xs font-mono text-amber-300 bg-amber-950/80 px-2.5 py-1 rounded-lg border border-amber-800/80">
+                  Período #{idx + 1} (2 horas)
                 </span>
               </div>
             ))}
+            {majorPeriods.length === 0 && (
+              <p className="text-xs text-slate-500 font-mono italic">No hay períodos mayores registrados para esta fecha.</p>
+            )}
           </div>
+          <p className="text-xs text-slate-400 leading-relaxed pt-1">
+            Los períodos mayores ocurren cuando la luna está directamente encima (cenit) o en las antípodas (nadir). Es el momento de máxima actividad biológica.
+          </p>
         </div>
 
         {/* Minor Periods */}
-        <div className="bg-slate-950 border border-slate-800 border-l-4 border-l-blue-500 rounded-xl p-4 relative">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-blue-950 text-blue-400 border border-blue-800 rounded-lg">
-                <Clock className="w-4 h-4" />
-              </div>
-              <span className="text-xs font-bold text-blue-300 uppercase tracking-wider font-mono">
-                Períodos Menores (~1 hora)
-              </span>
-            </div>
-            <span className="text-[10px] bg-blue-950 text-blue-300 border border-blue-800 px-2 py-0.5 rounded font-bold uppercase">
-              Actividad Media
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
+              <Zap className="w-4 h-4 fill-cyan-400" /> Períodos Menores (Picada Moderada ≈1h)
+            </span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">
+              Salida/Puesta Lunar
             </span>
           </div>
 
-          <p className="text-xs text-slate-400 mb-3">
-            Oportunidades secundarias de pesca al salir o ponerse la luna.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="space-y-2">
             {minorPeriods.map((p, idx) => (
-              <div key={idx} className="bg-slate-900 border border-slate-800 p-3 rounded-lg flex items-center justify-between">
-                <div>
-                  <div className="text-xs font-bold text-slate-200">{p.name}</div>
-                  <div className="text-xs text-blue-400 font-bold font-mono flex items-center gap-1 mt-0.5">
-                    <Clock className="w-3 h-3" />
-                    <span>{p.start} - {p.end} h</span>
-                  </div>
+              <div
+                key={idx}
+                className="bg-slate-900 border border-cyan-900/40 hover:border-cyan-500/50 p-3 rounded-xl flex items-center justify-between transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                  <span className="font-mono text-base font-bold text-white">{p.start} - {p.end}</span>
                 </div>
-                <span className="text-[10px] font-bold text-blue-300 bg-blue-950 px-2 py-0.5 rounded border border-blue-800">
-                  BUENA
+                <span className="text-xs font-mono text-cyan-300 bg-cyan-950/80 px-2.5 py-1 rounded-lg border border-cyan-800/80">
+                  Período #{idx + 1} (1 hora)
                 </span>
               </div>
             ))}
+            {minorPeriods.length === 0 && (
+              <p className="text-xs text-slate-500 font-mono italic">No hay períodos menores registrados para esta fecha.</p>
+            )}
           </div>
+          <p className="text-xs text-slate-400 leading-relaxed pt-1">
+            Los períodos menores coinciden con la salida y puesta de la luna en el horizonte. Generan aceleraciones breves pero intensas en la pesca.
+          </p>
         </div>
 
       </div>
 
-      {/* Astronomical Sun & Moon Timelines */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        
-        {/* Sun Box */}
-        <div className="bg-slate-950 border border-slate-800 rounded-xl p-4">
-          <div className="flex items-center justify-between text-amber-400 text-xs font-bold uppercase tracking-wider mb-3 border-b border-slate-800 pb-2">
-            <div className="flex items-center gap-2">
-              <Sun className="w-4 h-4 text-amber-400" />
-              <span>Ciclo Solar</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-            <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-              <div className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
-                <Sunrise className="w-3 h-3 text-amber-400" /> Salida
-              </div>
-              <div className="text-sm font-bold text-white mt-1 font-mono">{sunrise} h</div>
-            </div>
-
-            <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-              <div className="text-[10px] text-slate-400 font-bold uppercase">Mediodía</div>
-              <div className="text-sm font-bold text-white mt-1 font-mono">{solarNoon} h</div>
-            </div>
-
-            <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-              <div className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
-                <Sunset className="w-3 h-3 text-amber-500" /> Puesta
-              </div>
-              <div className="text-sm font-bold text-white mt-1 font-mono">{sunset} h</div>
-            </div>
-
-            <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-              <div className="text-[10px] text-slate-400 font-bold uppercase">Duración Día</div>
-              <div className="text-sm font-bold text-amber-300 mt-1 font-mono">{dayLength}</div>
-            </div>
-          </div>
+      {/* Advice Bar */}
+      <div className="bg-slate-950/80 border border-amber-900/40 rounded-xl p-3.5 flex items-start sm:items-center gap-3 text-xs text-amber-200/90 font-mono">
+        <Info className="w-5 h-5 text-amber-400 shrink-0 mt-0.5 sm:mt-0" />
+        <div>
+          <strong className="text-amber-300">Consejo Pro de Pesca:</strong> Si un período mayor o menor coincide con el cambio de marea (repunte de pleamar o bajamar), la probabilidad de picada es hasta un <strong className="text-white font-bold">300% mayor</strong>.
         </div>
-
-        {/* Moon Box */}
-        <div className="bg-slate-950 border border-slate-800 rounded-xl p-4">
-          <div className="flex items-center justify-between text-blue-300 text-xs font-bold uppercase tracking-wider mb-3 border-b border-slate-800 pb-2">
-            <div className="flex items-center gap-2">
-              <Moon className="w-4 h-4 text-blue-400" />
-              <span>Ciclo Lunar ({moonPhaseName})</span>
-            </div>
-            <div className="w-9 h-9 shrink-0">
-              <MoonPhaseDisc illuminationPercent={moonIllumination} waxing={moonAgeDays < 14.765} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-            <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-              <div className="text-[10px] text-slate-400 font-bold uppercase">Salida Luna</div>
-              <div className="text-sm font-bold text-white mt-1 font-mono">{moonrise} h</div>
-            </div>
-
-            <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-              <div className="text-[10px] text-slate-400 font-bold uppercase">Tránsito</div>
-              <div className="text-sm font-bold text-white mt-1 font-mono">{moonTransit} h</div>
-            </div>
-
-            <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-              <div className="text-[10px] text-slate-400 font-bold uppercase">Puesta Luna</div>
-              <div className="text-sm font-bold text-white mt-1 font-mono">{moonset} h</div>
-            </div>
-
-            <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-              <div className="text-[10px] text-slate-400 font-bold uppercase">Iluminación</div>
-              <div className="text-sm font-bold text-blue-300 mt-1 font-mono">{moonIllumination}%</div>
-            </div>
-          </div>
-        </div>
-
       </div>
 
     </div>

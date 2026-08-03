@@ -10,7 +10,9 @@ import {
   Star, 
   ArrowUpRight, 
   ArrowDownRight,
-  Filter
+  Filter,
+  LineChart,
+  Navigation
 } from 'lucide-react';
 import { Port, MonthlyTideRow, UserUnits } from '../types';
 import { getMonthlyTideData } from '../utils/tideEngine';
@@ -161,22 +163,38 @@ export const MonthlyTable: React.FC<MonthlyTableProps> = ({
         </div>
       </div>
 
-      {/* Filter search bar */}
-      <div className="flex items-center gap-2 max-w-xs print:hidden">
-        <div className="relative w-full">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-          <input
-            type="text"
-            placeholder="Filtrar por día o fase lunar..."
-            value={searchFilter}
-            onChange={(e) => setSearchFilter(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-          />
+      {/* Filter search bar & info hint */}
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <div className="flex items-center gap-2 max-w-xs w-full">
+          <div className="relative w-full">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="Filtrar por día o fase lunar..."
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+        </div>
+        
+        <div className="text-xs text-cyan-300 bg-cyan-950/70 border border-cyan-800/80 px-3 py-1.5 rounded-xl flex items-center gap-2 font-mono">
+          <LineChart className="w-4 h-4 text-cyan-400 shrink-0" />
+          <span>Haz clic en cualquier casilla de día para ver su gráfica de mareas</span>
         </div>
       </div>
 
+      {/* Mobile Touch Scroll Banner Hint for Table */}
+      <div className="sm:hidden flex items-center justify-between bg-cyan-950/60 border border-cyan-800/60 px-3 py-1.5 rounded-xl text-[11px] text-cyan-300 font-mono my-2">
+        <span className="flex items-center gap-1.5">
+          <Navigation className="w-3.5 h-3.5 animate-pulse text-cyan-400" />
+          Desliza lateralmente para ver todas las columnas
+        </span>
+        <span className="text-[10px] text-slate-400 font-bold">Tabla Mensual</span>
+      </div>
+
       {/* Table Container */}
-      <div className="overflow-x-auto rounded-xl border border-slate-800">
+      <div className="overflow-x-auto rounded-xl border border-slate-800 touch-pan-x custom-scrollbar">
         <table className="w-full text-left text-xs text-slate-300 divide-y divide-slate-800">
           <thead className="bg-slate-950 text-slate-300 font-bold uppercase tracking-wider text-[11px] font-mono">
             <tr>
@@ -186,6 +204,7 @@ export const MonthlyTable: React.FC<MonthlyTableProps> = ({
               <th className="py-3 px-3">BAJAMARES (HORA & ALTURA)</th>
               <th className="py-3 px-3">FASE LUNAR</th>
               <th className="py-3 px-3 text-center">SOLUNAR</th>
+              <th className="py-3 px-3 text-center">GRÁFICA</th>
               <th className="py-3 px-3 text-right">SOL (SALIDA / PUESTA)</th>
             </tr>
           </thead>
@@ -204,7 +223,8 @@ export const MonthlyTable: React.FC<MonthlyTableProps> = ({
                 <tr
                   key={row.dateStr}
                   onClick={() => onSelectDate(new Date(currentYear, currentMonth, row.dayNumber, 12))}
-                  className={`hover:bg-slate-800 transition-colors cursor-pointer ${
+                  title="Haz clic para ver la gráfica de mareas de este día"
+                  className={`hover:bg-slate-800 transition-colors cursor-pointer group ${
                     isSelectedDay ? 'bg-blue-950/80 border-l-4 border-blue-500 font-semibold text-white' : ''
                   }`}
                 >
@@ -247,6 +267,12 @@ export const MonthlyTable: React.FC<MonthlyTableProps> = ({
                       <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                       <span className="font-bold text-amber-300 font-mono text-xs">{row.solunarScore}/5</span>
                     </div>
+                  </td>
+
+                  <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1 bg-blue-950/80 hover:bg-blue-900 text-blue-300 border border-blue-700/60 px-2 py-0.5 rounded text-[11px] font-mono font-bold transition-all group-hover:scale-105 group-hover:border-cyan-400">
+                      <LineChart className="w-3 h-3 text-cyan-400" /> Ver ➔
+                    </span>
                   </td>
 
                   <td className="py-2.5 px-3 text-right font-mono text-slate-400 text-xs whitespace-nowrap">

@@ -72,7 +72,10 @@ export const CurrentTideGauge: React.FC<CurrentTideGaugeProps> = ({
   const isRising = currentTideState === 'subiendo';
 
   const scrollToChart = () => {
-    document.getElementById('tide-chart-section')?.scrollIntoView({ behavior: 'smooth' });
+    const el = document.getElementById('tide-chart-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   };
 
   return (
@@ -217,7 +220,11 @@ export const CurrentTideGauge: React.FC<CurrentTideGaugeProps> = ({
         <div className="w-full lg:w-96 flex flex-col gap-4">
           
           {/* Tidal Coefficient Badge Card */}
-          <div className="bg-slate-950 border border-slate-800 border-l-4 border-l-amber-500 rounded-xl p-4 flex flex-col justify-between">
+          <div 
+            onClick={scrollToChart}
+            className="bg-slate-950 border border-slate-800 border-l-4 border-l-amber-500 rounded-xl p-4 flex flex-col justify-between cursor-pointer hover:border-amber-500/80 transition-all group"
+            title="Haz clic para ver la gráfica de mareas"
+          >
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5 text-slate-300 text-xs font-bold uppercase tracking-wider">
                 <Activity className="w-4 h-4 text-amber-400" />
@@ -229,12 +236,15 @@ export const CurrentTideGauge: React.FC<CurrentTideGaugeProps> = ({
             </div>
 
             <div className="flex items-center gap-4 my-1">
-              <div className="w-16 h-16 rounded-xl bg-slate-900 border border-slate-700 flex flex-col items-center justify-center shrink-0 shadow-inner">
+              <div className="w-16 h-16 rounded-xl bg-slate-900 border border-slate-700 flex flex-col items-center justify-center shrink-0 shadow-inner group-hover:border-amber-400/60 transition-colors">
                 <span className="text-2xl font-black text-amber-300 font-mono">{coefficient}</span>
                 <span className="text-[9px] text-slate-500 font-bold uppercase">/ 120</span>
               </div>
               <div>
-                <div className="text-xs font-bold text-slate-100 uppercase tracking-wide">{coeffCategory}</div>
+                <div className="text-xs font-bold text-slate-100 uppercase tracking-wide flex items-center justify-between">
+                  <span>{coeffCategory}</span>
+                  <span className="text-[10px] text-cyan-400 font-mono font-normal ml-1">Ver gráfica ➔</span>
+                </div>
                 <div className="text-[11px] text-slate-400 leading-tight mt-1">{coeffDesc}</div>
               </div>
             </div>

@@ -175,4 +175,3 @@ export const Footer: React.FC<FooterProps> = ({ onSelectPort, onOpenLegal }) => 
     </footer>
   );
 };
-
