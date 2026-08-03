@@ -1,0 +1,6 @@
+{
+  "name": "Tabla de Mareas",
+  "description": "Tabla de mareas y previsión de surf interactiva: pleamar, bajamar, swell, periodo de ola, viento, gráfico solunar y datos astronómicos para puertos y costas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

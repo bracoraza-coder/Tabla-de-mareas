@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- ===== SEO principal ===== -->
+    <title>Tabla de Mareas y Previsión de Surf Pro | Olas, Swell y Viento en Tiempo Real</title>
+    <meta name="description" content="Tabla de mareas y previsión de surf en tiempo real: pleamar, bajamar, coeficiente, altura del agua, mar de fondo (swell), periodo de ola y viento. Puntuación de sesión, tabla recomendada y mejor hora para surfear. Datos gratuitos para más de 100 puertos." />
+    <meta name="keywords" content="tabla de mareas, mareas hoy, pleamar, bajamar, coeficiente de mareas, previsión de surf, previsión de olas, swell, mar de fondo, parte de surf, oleaje, estado del mar, mareas pesca, calendario solunar" />
+    <meta name="author" content="Tabla de Mareas Pro" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="canonical" href="https://tabla-de-mareas.vercel.app/" />
+
+    <!-- ===== Favicons e iconos ===== -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#0284c7" />
+
+    <!-- ===== Open Graph (Facebook, WhatsApp, LinkedIn...) ===== -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Tabla de Mareas Pro" />
+    <meta property="og:title" content="Tabla de Mareas y Previsión de Surf Pro | Olas, Swell y Viento en Tiempo Real" />
+    <meta property="og:description" content="Mareas y previsión de surf en tiempo real: swell, periodo de ola, viento y puntuación de sesión. Datos marinos gratuitos y siempre actualizados para tu puerto." />
+    <meta property="og:image" content="https://tabla-de-mareas.vercel.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="es_ES" />
+    <meta property="og:url" content="https://tabla-de-mareas.vercel.app/" />
+
+    <!-- ===== Twitter / X Card ===== -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Tabla de Mareas y Previsión de Surf Pro | Olas, Swell y Viento en Tiempo Real" />
+    <meta name="twitter:description" content="Mareas y previsión de surf en tiempo real: swell, periodo de ola, viento y puntuación de sesión, con datos gratuitos y actualizados." />
+    <meta name="twitter:image" content="https://tabla-de-mareas.vercel.app/og-image.png" />
+
+    <!-- ===== Datos estructurados (Schema.org) para resultados enriquecidos ===== -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Tabla de Mareas Pro",
+      "url": "https://tabla-de-mareas.vercel.app/",
+      "description": "Tabla de mareas y previsión de surf interactiva: pleamar, bajamar, swell, periodo de ola, viento, gráfico solunar y datos astronómicos para puertos y costas.",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Any",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EUR"
+      },
+      "inLanguage": "es"
+    }
+    </script>
+
+    <script>
+      (function() {
+        try {
+          var _fetch = window.fetch;
+          Object.defineProperty(window, 'fetch', {
+            get: function() { return _fetch; },
+            set: function(fn) { _fetch = fn; },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          console.warn('Fetch property fix skipped:', e);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

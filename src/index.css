@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Light mode overrides.
+   The app is built dark-first with Tailwind slate utilities.
+   Rather than touching every component, the "light" class on
+   <html> remaps the same slate/white utility classes to a
+   coherent light palette here, in one place.
+   ============================================================ */
+html.light body {
+  background-color: #f1f5f9;
+}
+
+/* Surfaces */
+html.light .bg-slate-950 { background-color: #f1f5f9; }
+html.light .bg-slate-950\/50 { background-color: rgba(241,245,249,0.7); }
+html.light .bg-slate-950\/60 { background-color: rgba(241,245,249,0.8); }
+html.light .bg-slate-950\/70 { background-color: rgba(241,245,249,0.85); }
+html.light .bg-slate-950\/80 { background-color: rgba(241,245,249,0.9); }
+html.light .bg-slate-950\/95 { background-color: rgba(255,255,255,0.97); }
+
+html.light .bg-slate-900 { background-color: #ffffff; }
+html.light .bg-slate-900\/50 { background-color: rgba(255,255,255,0.75); }
+html.light .bg-slate-900\/60 { background-color: rgba(255,255,255,0.85); }
+html.light .bg-slate-900\/80 { background-color: rgba(255,255,255,0.92); }
+
+html.light .bg-slate-800 { background-color: #e2e8f0; }
+html.light .bg-slate-800\/60 { background-color: rgba(226,232,240,0.7); }
+html.light .bg-slate-750 { background-color: #e8edf3; }
+html.light .bg-slate-700 { background-color: #cbd5e1; }
+
+html.light .bg-white { background-color: #0f172a; }
+
+/* Borders */
+html.light .border-slate-900 { border-color: #cbd5e1; }
+html.light .border-slate-800 { border-color: #e2e8f0; }
+html.light .border-slate-800\/80 { border-color: rgba(226,232,240,0.9); }
+html.light .border-slate-800\/70 { border-color: rgba(226,232,240,0.85); }
+html.light .border-slate-700 { border-color: #cbd5e1; }
+html.light .border-slate-600 { border-color: #94a3b8; }
+html.light .border-slate-300 { border-color: #cbd5e1; }
+
+/* Text */
+html.light .text-white { color: #0f172a; }
+html.light .text-slate-100 { color: #1e293b; }
+html.light .text-slate-200 { color: #1e293b; }
+html.light .text-slate-300 { color: #334155; }
+html.light .text-slate-400 { color: #64748b; }
+html.light .text-slate-500 { color: #64748b; }
+html.light .text-slate-600 { color: #475569; }
+html.light .text-slate-700 { color: #334155; }
+html.light .text-slate-950 { color: #0f172a; }
+
+/* Shadows read heavier on white, soften them */
+html.light .shadow-2xl { box-shadow: 0 10px 30px -8px rgba(15,23,42,0.15); }
+
+/* Scrollbar thumb legibility on white */
+html.light ::selection { background-color: #0284c7; color: #ffffff; }
+
+/* Mobile: never allow horizontal scroll/white gaps */
+html, body { overflow-x: hidden; max-width: 100vw; }
