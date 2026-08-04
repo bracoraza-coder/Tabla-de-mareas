@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Map, MapPin, X, Search, List, Navigation, Layers, Compass } from 'lucide-react';
+import { Map, MapPin, X, Search, List, Navigation, Layers, Compass, ArrowLeft, Maximize2, Minimize2 } from 'lucide-react';
 import { Port } from '../types';
 import { PORTS_DATABASE } from '../data/portsData';
 import { buildPortPath } from '../utils/router';
@@ -118,6 +118,7 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
   const [mapLayer, setMapLayer] = useState<MapLayerType>('dark');
   const [gpsStatus, setGpsStatus] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -167,6 +168,10 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
         center: [selectedPort.lat, selectedPort.lng],
         zoom: 6,
         zoomControl: true,
+        minZoom: 2,
+        maxZoom: 18,
+        maxBounds: [[-85, -180], [85, 180]],
+        maxBoundsViscosity: 1.0,
       });
 
       const currentLayerCfg = MAP_LAYERS[mapLayer];
@@ -174,6 +179,7 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
         attribution: currentLayerCfg.attribution,
         subdomains: currentLayerCfg.subdomains || 'abc',
         maxZoom: 18,
+        noWrap: true,
       }).addTo(map);
 
       tileLayerRef.current = tiles;
@@ -218,6 +224,7 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
         attribution: layerCfg.attribution,
         subdomains: layerCfg.subdomains || 'abc',
         maxZoom: 18,
+        noWrap: true,
       }).addTo(mapInstanceRef.current);
       tileLayerRef.current = newTiles;
     }
@@ -343,12 +350,21 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-0 sm:p-4">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-none sm:rounded-2xl w-full h-full sm:h-auto sm:max-w-5xl sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className={`fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-0 ${isFullScreen ? 'p-0' : 'sm:p-4'}`}>
+      <div className={`bg-slate-900 border border-slate-700/80 flex flex-col shadow-2xl overflow-hidden transition-all duration-300 ${isFullScreen ? 'w-screen h-screen rounded-none max-w-none max-h-none' : 'rounded-none sm:rounded-2xl w-full h-full sm:h-auto sm:max-w-5xl sm:max-h-[90vh]'}`}>
         
         {/* Header */}
         <div className="p-3 sm:p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
+            {/* Back Button */}
+            <button
+              onClick={onClose}
+              className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border border-slate-700 shrink-0"
+              title="Volver a la pantalla anterior"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Atrás</span>
+            </button>
             <div className="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-blue-600/30">
               <Map className="w-5 h-5" />
             </div>
@@ -363,6 +379,16 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {/* Fullscreen Toggle Button */}
+            <button
+              onClick={() => setIsFullScreen(!isFullScreen)}
+              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-bold hidden md:flex items-center gap-1.5 transition-all cursor-pointer border border-slate-700 shadow-md"
+              title={isFullScreen ? 'Salir de pantalla completa' : 'Ver mapa en pantalla completa'}
+            >
+              {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              <span>{isFullScreen ? 'Restaurar' : 'Pantalla Completa'}</span>
+            </button>
+
             <div className="bg-slate-800 p-1 rounded-xl flex items-center gap-1 border border-slate-700">
               <button
                 onClick={() => setView('mapa')}
@@ -387,6 +413,7 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
             <button
               onClick={onClose}
               className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all cursor-pointer"
+              title="Cerrar"
             >
               <X className="w-5 h-5" />
             </button>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Port, TideDayData, MarineWeather } from '../types';
-import { calculateTideDayData } from '../utils/tideEngine';
+import { calculateTideDayData, calculateBeaufort, degToCompass } from '../utils/tideEngine';
 
 /**
  * Custom hook to fetch real data for a given port and date.
@@ -68,20 +68,8 @@ export function useRealTideData(port: Port, date: Date) {
             const windKnots = curr.wind_speed_10m / 1.852;
             const gustKnots = curr.wind_gusts_10m / 1.852;
             
-            // Beaufort scale approx
-            let bf = 0;
-            if (windKnots < 1) bf = 0;
-            else if (windKnots < 4) bf = 1;
-            else if (windKnots < 7) bf = 2;
-            else if (windKnots < 11) bf = 3;
-            else if (windKnots < 17) bf = 4;
-            else if (windKnots < 22) bf = 5;
-            else if (windKnots < 28) bf = 6;
-            else if (windKnots < 34) bf = 7;
-            else if (windKnots < 41) bf = 8;
-            else bf = 9;
-
-            const bfDesc = ['Calma', 'Ventolina', 'Brisa muy débil', 'Brisa débil', 'Brisa mod.', 'Brisa fresca', 'Brisa fuerte', 'Frescachón', 'Temporal', 'Temporal fuerte'][bf] || 'Huracanado';
+            // Use shared calculation from tideEngine
+            const bfInfo = calculateBeaufort(windKnots);
 
             setWeatherData(prev => ({
               ...prev,
@@ -93,8 +81,8 @@ export function useRealTideData(port: Port, date: Date) {
               feelsLike: curr.apparent_temperature,
               pressureHpa: curr.surface_pressure,
               humidityPercent: curr.relative_humidity_2m,
-              beaufortScale: bf,
-              beaufortDescription: bfDesc,
+              beaufortScale: bfInfo.beaufortScale,
+              beaufortDescription: bfInfo.beaufortDescription,
               // Map weather code roughly
               condition: curr.weather_code > 50 ? 'Lluvia' : curr.weather_code > 0 ? 'Nublado' : 'Despejado'
             }));
@@ -161,11 +149,4 @@ export function useRealTideData(port: Port, date: Date) {
   }, [port, date]);
 
   return { tideData, weatherData, loading, error };
-}
-
-// Helper to convert degrees to compass direction
-function degToCompass(num: number): string {
-    const val = Math.floor((num / 22.5) + 0.5);
-    const arr = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
-    return arr[(val % 16)];
 }

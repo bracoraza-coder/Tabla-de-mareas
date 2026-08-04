@@ -192,3 +192,27 @@ export function formatHeight(meters: number, units: { height: 'm'|'ft' }) {
   }
   return `${meters.toFixed(2)} m`;
 }
+
+export function degToCompass(num: number): string {
+  const val = Math.floor((num / 22.5) + 0.5);
+  const arr = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+  return arr[(val % 16)];
+}
+
+export function calculateBeaufort(windKnots: number): { beaufortScale: number; beaufortDescription: string } {
+  let bf = 0;
+  if (windKnots < 1) bf = 0;
+  else if (windKnots < 4) bf = 1;
+  else if (windKnots < 7) bf = 2;
+  else if (windKnots < 11) bf = 3;
+  else if (windKnots < 17) bf = 4;
+  else if (windKnots < 22) bf = 5;
+  else if (windKnots < 28) bf = 6;
+  else if (windKnots < 34) bf = 7;
+  else if (windKnots < 41) bf = 8;
+  else bf = 9;
+
+  const beaufortDescription = ['Calma', 'Ventolina', 'Brisa muy débil', 'Brisa débil', 'Brisa mod.', 'Brisa fresca', 'Brisa fuerte', 'Frescachón', 'Temporal', 'Temporal fuerte'][bf] || 'Huracanado';
+  return { beaufortScale: bf, beaufortDescription };
+}
+

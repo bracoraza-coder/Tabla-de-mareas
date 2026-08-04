@@ -16,7 +16,8 @@ import {
   AlertCircle,
   HelpCircle,
   Info,
-  Waves
+  Waves,
+  ArrowLeft
 } from 'lucide-react';
 import { Port, NotificationSettings, UserUnits, ScheduledAlert } from '../types';
 import { PORTS_DATABASE } from '../data/portsData';
@@ -105,6 +106,14 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
         {/* Header */}
         <div className="bg-slate-950 px-6 py-4 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border border-slate-700 shrink-0"
+              title="Volver"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Atrás</span>
+            </button>
             <div className="w-10 h-10 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl flex items-center justify-center shrink-0">
               <BellRing className="w-5 h-5 animate-pulse" />
             </div>
@@ -122,6 +131,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
             id="close-notifications-modal-btn"
+            title="Cerrar"
           >
             <X className="w-5 h-5" />
           </button>
