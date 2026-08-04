@@ -102,10 +102,14 @@ export default function App() {
     }
   }, []);
 
-  // Update hash when port changes
+  // Update hash when port changes, but only if user has defined a port
   useEffect(() => {
-    window.history.replaceState(null, '', buildPortPath(selectedPort));
-  }, [selectedPort]);
+    if (hasUserDefinedPort) {
+      window.history.replaceState(null, '', buildPortPath(selectedPort));
+    } else {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }, [selectedPort, hasUserDefinedPort]);
 
   // Sync state to local storage when it changes
   useEffect(() => {
