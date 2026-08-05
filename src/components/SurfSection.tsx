@@ -1,6 +1,6 @@
 import React from 'react';
 import { TideDayData, MarineWeather, Port, UserUnits } from '../types';
-import { Waves, Wind, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Waves, Wind, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { SurfDiagram } from './gauges/SurfDiagram';
 
 interface SurfSectionProps {
@@ -16,6 +16,40 @@ export const SurfSection: React.FC<SurfSectionProps> = ({ dayData, weather, port
   const isOffshore = weather.windDegrees >= 45 && weather.windDegrees <= 135; 
   const isLightWind = weather.windSpeedKnots <= 10;
   
+  const isInland = port.region.toLowerCase().includes('río') || 
+                   port.region.toLowerCase().includes('embalse') || 
+                   port.name.toLowerCase().includes('río ') || 
+                   port.name.toLowerCase().includes('embalse ');
+
+  if (isInland) {
+    return (
+      <div className="bg-[#0f172a] rounded-2xl border border-slate-800/50 p-6 shadow-xl relative overflow-hidden mt-8">
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div className="flex items-center justify-between mb-8 relative z-10">
+          <div className="flex items-center gap-3">
+            <Waves className="w-6 h-6 text-cyan-400" />
+            <h2 className="text-xl font-bold text-white tracking-tight">Reporte de Surf & Pronóstico</h2>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/50 border border-slate-700/50">
+            <span className="text-xs text-slate-400">Spot:</span>
+            <span className="text-sm font-medium text-emerald-400 truncate max-w-[200px]">{port.name}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-center justify-center py-12 px-4 bg-slate-900/40 rounded-xl border border-slate-800/60 text-center">
+          <div className="w-16 h-16 bg-slate-800/80 rounded-full flex items-center justify-center mb-4">
+            <Info className="w-8 h-8 text-slate-400" />
+          </div>
+          <h3 className="text-xl font-semibold text-slate-200 mb-2">Ubicación no apta para surf</h3>
+          <p className="text-slate-400 max-w-md text-sm leading-relaxed">
+            Esta ubicación corresponde a aguas interiores (río o embalse) donde no se forman olas aptas para la práctica del surf.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // Wave height score
   let waveScore = 0;
   if (weather.waveHeightMeters >= 1.0 && weather.waveHeightMeters <= 2.8) {
@@ -40,7 +74,14 @@ export const SurfSection: React.FC<SurfSectionProps> = ({ dayData, weather, port
   else if (isLightWind) windScore = 15;
   else windScore = 5;
 
-  const rating = Math.min(100, waveScore + periodScore + windScore);
+  let rating = Math.min(100, waveScore + periodScore + windScore);
+
+  // Strict limits to prevent high ratings on flat days
+  if (weather.waveHeightMeters < 0.4) {
+    rating = Math.min(rating, 15); // Completely flat, restrict to poor
+  } else if (weather.waveHeightMeters < 0.7) {
+    rating = Math.min(rating, 45); // Very small, restrict to regular at best
+  }
 
   let ratingText = 'Condiciones Pobres';
   let ratingColor = 'text-red-400';

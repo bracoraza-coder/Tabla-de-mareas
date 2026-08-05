@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/mareas/:slug", "destination": "/index.html" }
+  ]
+}

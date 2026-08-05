@@ -8,13 +8,13 @@ import { PORTS_DATABASE } from '../data/portsData';
 
 // Format: /puerto/es-gal-vigo
 export function buildPortPath(port: Port): string {
-  return `/#/puerto/${port.id}`;
+  return `/mareas/${port.id}`;
 }
 
-export function parsePortFromHash(): Port | null {
-  const hash = window.location.hash;
-  if (hash.startsWith('#/puerto/')) {
-    const id = hash.replace('#/puerto/', '');
+export function parsePortFromUrl(): Port | null {
+  const path = window.location.pathname;
+  if (path.startsWith('/mareas/')) {
+    const id = path.replace('/mareas/', '');
     const found = PORTS_DATABASE.find(p => p.id === id);
     if (found) return found;
   }

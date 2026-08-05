@@ -22,11 +22,11 @@ import { WelcomeHome } from './components/WelcomeHome';
 import { Port, UserUnits, NotificationSettings } from './types';
 import { PORTS_DATABASE, getPortById } from './data/portsData';
 import { useRealTideData } from './hooks/useRealTideData';
-import { parsePortFromHash, buildPortPath } from './utils/router';
+import { parsePortFromUrl, buildPortPath } from './utils/router';
 
 export default function App() {
   const [selectedPort, setSelectedPort] = useState<Port>(() => {
-    const portFromUrl = parsePortFromHash();
+    const portFromUrl = parsePortFromUrl();
     if (portFromUrl) return portFromUrl;
     try {
       const savedPortId = localStorage.getItem('mareas_selected_port_id');
@@ -41,7 +41,7 @@ export default function App() {
   });
 
   const [hasUserDefinedPort, setHasUserDefinedPort] = useState<boolean>(() => {
-    return !!parsePortFromHash();
+    return !!parsePortFromUrl();
   });
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -75,12 +75,16 @@ export default function App() {
 
   // Load state from local storage and URL hash on mount
   useEffect(() => {
-    // 1. URL Hash routing
-    const portFromUrl = parsePortFromHash();
-    if (portFromUrl) {
-      setSelectedPort(portFromUrl);
-      setHasUserDefinedPort(true);
-    }
+    // 1. URL routing
+    const handleUrlChange = () => {
+      const portFromUrl = parsePortFromUrl();
+      if (portFromUrl) {
+        setSelectedPort(portFromUrl);
+        setHasUserDefinedPort(true);
+      }
+    };
+    handleUrlChange();
+    window.addEventListener('popstate', handleUrlChange);
 
     // 2. LocalStorage Preferences
     try {
@@ -100,16 +104,9 @@ export default function App() {
     } catch (e) {
       console.warn('Could not load preferences from local storage', e);
     }
-  }, []);
 
-  // Update hash when port changes, but only if user has defined a port
-  useEffect(() => {
-    if (hasUserDefinedPort) {
-      window.history.replaceState(null, '', buildPortPath(selectedPort));
-    } else {
-      window.history.replaceState(null, '', window.location.pathname + window.location.search);
-    }
-  }, [selectedPort, hasUserDefinedPort]);
+    return () => window.removeEventListener('popstate', handleUrlChange);
+  }, []);
 
   // Sync state to local storage when it changes
   useEffect(() => {
@@ -136,6 +133,10 @@ export default function App() {
   const handleSelectPort = (port: Port) => {
     setSelectedPort(port);
     setHasUserDefinedPort(true);
+    
+    // Update URL using pushState for real paths
+    window.history.pushState(null, '', buildPortPath(port));
+
     try {
       localStorage.setItem('mareas_selected_port_id', port.id);
     } catch (e) {
@@ -182,7 +183,7 @@ export default function App() {
       case 'grafico':
         return (
           <div className="space-y-6">
-            <TideFishChart3D data={tideData} units={units} port={selectedPort} />
+            <TideFishChart3D data={tideData} units={units} port={selectedPort} weather={weatherData} />
             <CurrentTideGauge dayData={tideData} port={selectedPort} units={units} isViewingToday={isViewingToday} />
             <Gauges3D weather={weatherData} units={units} />
             <TideChart data={tideData} units={units} port={selectedPort} />
@@ -199,8 +200,8 @@ export default function App() {
       case 'pesca':
         return (
           <div className="space-y-6">
-            <TideFishChart3D data={tideData} units={units} port={selectedPort} />
-            <SolunarSection dayData={tideData} port={selectedPort} />
+            <TideFishChart3D data={tideData} units={units} port={selectedPort} weather={weatherData} />
+            <SolunarSection dayData={tideData} port={selectedPort} weather={weatherData} />
             <ProfessionalFishingSuite dayData={tideData} weather={weatherData} port={selectedPort} />
             <AiAssistant port={selectedPort} dayData={tideData} units={units} />
           </div>
@@ -245,7 +246,7 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen font-sans ${theme === 'dark' ? 'bg-slate-950 text-slate-200' : 'bg-slate-900 text-slate-100'}`}>
+    <div className={`min-h-screen flex flex-col font-sans ${theme === 'dark' ? 'bg-slate-950 text-slate-200' : 'bg-slate-900 text-slate-100'}`}>
       <Header
         selectedPort={selectedPort}
         onSelectPort={handleSelectPort}
@@ -281,32 +282,34 @@ export default function App() {
         }}
       />
 
-      <main className="max-w-6xl mx-auto p-4 space-y-6 animate-fade-in mt-4">
-        {activeTab === 'mapa' ? (
-          <div className="space-y-6">
-            <PortMapModal
-              isOpen={true}
-              onClose={() => setActiveTab('grafico')}
-              selectedPort={selectedPort}
-              onSelectPort={(port) => {
-                handleSelectPort(port);
-                setActiveTab('grafico');
-              }}
-              isEmbedded={true}
-            />
-          </div>
-        ) : !hasUserDefinedPort ? (
-          <WelcomeHome
-            onSelectPort={handleSelectPort}
-            onOpenMapModal={() => {
-              setActiveTab('mapa');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+      {activeTab === 'mapa' ? (
+        <main className="flex-1 w-full flex flex-col overflow-hidden animate-fade-in">
+          <PortMapModal
+            isOpen={true}
+            onClose={() => setActiveTab('grafico')}
+            selectedPort={selectedPort}
+            onSelectPort={(port) => {
+              handleSelectPort(port);
+              setActiveTab('grafico');
             }}
+            isEmbedded={true}
           />
-        ) : (
-          renderTabContent()
-        )}
-      </main>
+        </main>
+      ) : (
+        <main className="flex-1 w-full max-w-6xl mx-auto p-4 space-y-6 animate-fade-in mt-4">
+          {!hasUserDefinedPort ? (
+            <WelcomeHome
+              onSelectPort={handleSelectPort}
+              onOpenMapModal={() => {
+                setActiveTab('mapa');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+          ) : (
+            renderTabContent()
+          )}
+        </main>
+      )}
 
       <Footer
         onSelectPort={(p) => { handleSelectPort(p); window.scrollTo(0,0); }}

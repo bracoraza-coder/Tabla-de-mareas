@@ -1,5 +1,5 @@
 import React from 'react';
-import { Waves, ShieldAlert, BookOpen, Scale, FileText, Lock, Cookie, Anchor } from 'lucide-react';
+import { Waves, ShieldAlert, BookOpen, Scale, FileText, Lock, Cookie, Anchor, MessageSquarePlus, Send } from 'lucide-react';
 import { PORTS_DATABASE } from '../data/portsData';
 import { Port } from '../types';
 import { LegalTab } from './LegalModal';
@@ -92,6 +92,26 @@ export const Footer: React.FC<FooterProps> = ({ onSelectPort, onOpenLegal }) => 
               </div>
             </details>
           )}
+        </div>
+
+        {/* User Feedback & Suggestions */}
+        <div className="bg-slate-900/50 border border-slate-800 border-l-4 border-l-emerald-500 rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-white text-sm">
+            <MessageSquarePlus className="w-6 h-6 text-emerald-400 shrink-0" />
+            <div>
+              <div className="font-bold">¿Tienes ideas para mejorar la web?</div>
+              <div className="text-slate-400 font-mono text-[11px] mt-0.5">Envíanos tus propuestas o sugerencias a través de nuestro bot de Telegram.</div>
+            </div>
+          </div>
+          <a
+            href="https://t.me/InfoMareasSugerencias_bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-5 py-2.5 bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-600/30 transition-all rounded-lg font-bold flex items-center gap-2 cursor-pointer text-xs shrink-0"
+          >
+            <Send className="w-4 h-4" />
+            <span>Enviar Sugerencia</span>
+          </a>
         </div>
 
         {/* Legal & Compliance Navigation Row */}

@@ -23,7 +23,13 @@ export function calculateTideDayData(port: Port, date: Date): TideDayData {
   
   // Phase shift based on port offset + lunar cycle
   const lunarCycleOffset = lunarPhase * lunarDayHours; 
-  const portOffsetHours = port.phaseDelayMinutes / 60;
+  
+  // Geographic delay: tide wave travels north along the Iberian coast
+  // Adds approx 1.5 hours of difference between South (Andalusia) and North (Galicia)
+  const geoDelayHours = (port.lat - 36) * 0.25 + (port.lng + 8) * 0.05;
+
+  const portOffsetHours = (port.phaseDelayMinutes / 60) + geoDelayHours;
+
   let firstHighTideHour = mod(lunarCycleOffset + portOffsetHours, 12.4206);
   if (firstHighTideHour < 0) firstHighTideHour += 12.4206;
 
@@ -33,10 +39,9 @@ export function calculateTideDayData(port: Port, date: Date): TideDayData {
   // Amplitude modulates with coefficient (30 = base, 120 = base+amp)
   const currentAmplitude = (coefficient / 120) * port.amplitude;
 
-  // Generate 24 hours of points + calculate extremes
+  // Generate 24 hours of points
   for (let m = 0; m <= 24 * 60; m += 15) {
     const hours = m / 60;
-    // Simple cosine wave for tide height
     const rads = ((hours - firstHighTideHour) / 12.4206) * 2 * Math.PI;
     const height = port.baseHeight + currentAmplitude * Math.cos(rads);
     
@@ -44,32 +49,34 @@ export function calculateTideDayData(port: Port, date: Date): TideDayData {
       time: `${String(Math.floor(hours)).padStart(2,'0')}:${String(m % 60).padStart(2,'0')}`,
       height
     });
+  }
 
-    // Detect peaks and valleys (roughly)
-    if (m > 0 && m < 24 * 60) {
-      const prevRads = (((m - 15)/60 - firstHighTideHour) / 12.4206) * 2 * Math.PI;
-      const nextRads = (((m + 15)/60 - firstHighTideHour) / 12.4206) * 2 * Math.PI;
-      
-      const prevH = port.baseHeight + currentAmplitude * Math.cos(prevRads);
-      const nextH = port.baseHeight + currentAmplitude * Math.cos(nextRads);
+  // Calculate high and low tides analytically for exact minute precision
+  // High tides occur at firstHighTideHour + k * 12.4206
+  // Low tides occur at firstHighTideHour + 6.2103 + k * 12.4206
 
-      if (height > prevH && height > nextH) {
-        events.push({
-          time: `${String(Math.floor(hours)).padStart(2,'0')}:${String(m % 60).padStart(2,'0')}`,
-          height,
-          type: 'pleamar'
-        });
-      } else if (height < prevH && height < nextH) {
-         events.push({
-          time: `${String(Math.floor(hours)).padStart(2,'0')}:${String(m % 60).padStart(2,'0')}`,
-          height,
-          type: 'bajamar'
-        });
-      }
+  for (let k = -1; k <= 3; k++) {
+    const h = firstHighTideHour + k * 12.4206;
+    if (h >= 0 && h < 24) {
+      events.push({
+        time: formatTime(h),
+        height: port.baseHeight + currentAmplitude,
+        type: 'pleamar'
+      });
     }
   }
 
-  // Sort events
+  for (let k = -2; k <= 3; k++) {
+    const h = firstHighTideHour + 6.2103 + k * 12.4206;
+    if (h >= 0 && h < 24) {
+      events.push({
+        time: formatTime(h),
+        height: Math.max(0, port.baseHeight - currentAmplitude),
+        type: 'bajamar'
+      });
+    }
+  }
+
   events.sort((a, b) => {
     const [ah, am] = a.time.split(':').map(Number);
     const [bh, bm] = b.time.split(':').map(Number);

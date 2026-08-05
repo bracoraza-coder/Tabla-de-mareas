@@ -16,7 +16,7 @@ const FishIcon: React.FC<{ x: number; y: number; scale: number; color: string; g
 
 export const FishingDiagram: React.FC<FishingDiagramProps> = ({ activityScore, label }) => {
   const totalSlots = 5;
-  const filled = Math.max(0, Math.min(5, Math.round(activityScore)));
+  const filled = Math.max(0, Math.min(5, Math.round(activityScore / 20)));
   const colors = ['#475569', '#0ea5e9', '#22d3ee', '#fbbf24', '#f97316'];
   const rating = filled <= 1 ? 0 : filled <= 2 ? 1 : filled <= 3 ? 2 : filled <= 4 ? 3 : 4;
 

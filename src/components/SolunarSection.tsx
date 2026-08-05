@@ -1,5 +1,5 @@
 import React from 'react';
-import { TideDayData, Port } from '../types';
+import { TideDayData, Port, MarineWeather } from '../types';
 import { Fish, Moon, Sun, Star, Flame, Zap, Clock, Info, Anchor } from 'lucide-react';
 import { MoonPhaseDisc } from './gauges/WeatherGauges';
 import { ActivityWaveChart } from './gauges/ActivityWaveChart';
@@ -8,11 +8,44 @@ import { FishingDiagram } from './gauges/FishingDiagram';
 interface SolunarSectionProps {
   dayData: TideDayData;
   port: Port;
+  weather?: MarineWeather;
 }
 
-export const SolunarSection: React.FC<SolunarSectionProps> = ({ dayData, port }) => {
+export const SolunarSection: React.FC<SolunarSectionProps> = ({ dayData, port, weather }) => {
   const { solunar, sunrise, sunset, highLows } = dayData;
-  const { moonPhaseName, illuminationPercent, isWaxing, majorPeriods, minorPeriods, activityScore } = solunar;
+  let { moonPhaseName, illuminationPercent, isWaxing, majorPeriods, minorPeriods, activityScore } = solunar;
+
+  // Enhance activityScore based on weather factors if available
+  if (weather) {
+    // base score (50%)
+    let advancedScore = activityScore * 0.5;
+    
+    // Barometric Pressure (up to 30%)
+    // Ideal: 1010-1018 hPa
+    if (weather.pressureHpa >= 1010 && weather.pressureHpa <= 1018) {
+      advancedScore += 30; // Perfect pressure
+    } else if (weather.pressureHpa > 1018 && weather.pressureHpa < 1022) {
+      advancedScore += 15; // Fair
+    } else if (weather.pressureHpa < 1010) {
+      advancedScore += 25; // Low pressure, fish usually feed actively
+    } else {
+      advancedScore += 5; // Very high pressure, fish go deep
+    }
+
+    // Water Temp (up to 20%)
+    // Ideal for most coastal: 16-22°C
+    if (weather.waterTemp >= 16 && weather.waterTemp <= 22) {
+      advancedScore += 20;
+    } else if (weather.waterTemp > 22 && weather.waterTemp <= 26) {
+      advancedScore += 10;
+    } else if (weather.waterTemp >= 12 && weather.waterTemp < 16) {
+      advancedScore += 10;
+    } else {
+      advancedScore += 0;
+    }
+
+    activityScore = Math.min(100, Math.round(advancedScore));
+  }
 
   let scoreColor = 'text-slate-400';
   let badgeBg = 'bg-slate-800 text-slate-300 border-slate-700';

@@ -1,14 +1,15 @@
 import React, { useMemo, useState, useRef } from 'react';
-import { TideDayData, UserUnits, Port } from '../../types';
+import { TideDayData, UserUnits, Port, MarineWeather } from '../../types';
 import { Sunrise, Sunset, Fish, Waves, Clock, Sparkles, HelpCircle, Flame, Zap, Compass, Navigation } from 'lucide-react';
 
 interface TideFishChart3DProps {
   data: TideDayData;
   units: UserUnits;
   port: Port;
+  weather?: MarineWeather;
 }
 
-export const TideFishChart3D: React.FC<TideFishChart3DProps> = ({ data, units, port }) => {
+export const TideFishChart3D: React.FC<TideFishChart3DProps> = ({ data, units, port, weather }) => {
   const chartHeight = 320;
   const chartWidth = 1000;
   const svgRef = useRef<SVGSVGElement>(null);
@@ -117,7 +118,26 @@ export const TideFishChart3D: React.FC<TideFishChart3DProps> = ({ data, units, p
     return closest.height;
   }, [points, currentDec, data.currentWaterHeight]);
 
-  const currentY = getY(currentHeightInterpolated);
+  // Enhance activityScore based on weather factors if available
+  let activityScore = solunar.activityScore ?? 50;
+  if (weather) {
+    let advancedScore = activityScore * 0.5;
+    if (weather.pressureHpa >= 1010 && weather.pressureHpa <= 1018) advancedScore += 30;
+    else if (weather.pressureHpa > 1018 && weather.pressureHpa < 1022) advancedScore += 15;
+    else if (weather.pressureHpa < 1010) advancedScore += 25;
+    else advancedScore += 5;
+
+    if (weather.waterTemp >= 16 && weather.waterTemp <= 22) advancedScore += 20;
+    else if (weather.waterTemp > 22 && weather.waterTemp <= 26) advancedScore += 10;
+    else if (weather.waterTemp >= 12 && weather.waterTemp < 16) advancedScore += 10;
+    else advancedScore += 0;
+
+    activityScore = Math.min(100, Math.round(advancedScore));
+  }
+
+  const score = activityScore;
+  const isEpic = score >= 80;
+  const isPoor = score < 35;
 
   // Check if current time is inside a Major or Minor period
   const isTimeInPeriod = (dec: number, startStr: string, endStr: string) => {
@@ -156,6 +176,9 @@ export const TideFishChart3D: React.FC<TideFishChart3DProps> = ({ data, units, p
       flip: boolean;
     }[] = [];
 
+    // Scale modifier based on the day's advanced score
+    const scaleModifier = isEpic ? 1.3 : (isPoor ? 0.6 : 1.0);
+
     // 1. Major Periods Fish
     (solunar.majorPeriods || []).forEach((p, idx) => {
       const startDec = parseTimeToDecimal(p.start);
@@ -163,7 +186,12 @@ export const TideFishChart3D: React.FC<TideFishChart3DProps> = ({ data, units, p
       if (endDec < startDec) endDec += 24;
       const midDec = (startDec + endDec) / 2 % 24;
 
-      [-0.4, 0.4].forEach((offset, fIdx) => {
+      // More fish if epic day, fewer if poor
+      let offsets = [-0.4, 0.4];
+      if (isEpic) offsets = [-0.6, -0.2, 0.2, 0.6];
+      if (isPoor) offsets = [0]; // Just one small fish in major periods on poor days
+      
+      offsets.forEach((offset, fIdx) => {
         const dec = (midDec + offset + 24) % 24;
         const x = (dec / 24) * chartWidth;
         const depthY = chartHeight - 50 - (fIdx % 2) * 22;
@@ -172,7 +200,7 @@ export const TideFishChart3D: React.FC<TideFishChart3DProps> = ({ data, units, p
           x,
           y: depthY,
           type: 'major',
-          scale: 1.05 + (fIdx % 2) * 0.1,
+          scale: (1.05 + (fIdx % 2) * 0.1) * scaleModifier,
           flip: fIdx % 2 === 1,
         });
       });
@@ -185,7 +213,11 @@ export const TideFishChart3D: React.FC<TideFishChart3DProps> = ({ data, units, p
       if (endDec < startDec) endDec += 24;
       const midDec = (startDec + endDec) / 2 % 24;
 
-      [-0.2, 0.2].forEach((offset, fIdx) => {
+      let offsets = [-0.2, 0.2];
+      if (isEpic) offsets = [-0.3, 0, 0.3];
+      if (isPoor) offsets = [0]; // Just one small fish
+      
+      offsets.forEach((offset, fIdx) => {
         const dec = (midDec + offset + 24) % 24;
         const x = (dec / 24) * chartWidth;
         const depthY = chartHeight - 42 - (fIdx % 2) * 18;
@@ -194,14 +226,20 @@ export const TideFishChart3D: React.FC<TideFishChart3DProps> = ({ data, units, p
           x,
           y: depthY,
           type: 'minor',
-          scale: 0.8,
+          scale: 0.8 * scaleModifier,
           flip: fIdx % 2 === 0,
         });
       });
     });
 
     // 3. Normal background fish
-    const hours = [1, 4, 8, 11, 14, 17, 20, 23];
+    let hours = [1, 4, 8, 11, 14, 17, 20, 23];
+    if (isEpic) {
+      hours = [1, 3, 5, 8, 10, 11, 14, 16, 17, 20, 22, 23]; // Lots of fish
+    } else if (isPoor) {
+      hours = [4, 14, 20]; // Very few fish
+    }
+
     hours.forEach((h, idx) => {
       const inMajor = (solunar.majorPeriods || []).some(p => isTimeInPeriod(h, p.start, p.end));
       const inMinor = (solunar.minorPeriods || []).some(p => isTimeInPeriod(h, p.start, p.end));
@@ -213,14 +251,14 @@ export const TideFishChart3D: React.FC<TideFishChart3DProps> = ({ data, units, p
           x,
           y: depthY,
           type: 'normal',
-          scale: 0.55,
+          scale: 0.55 * scaleModifier,
           flip: idx % 2 === 1,
         });
       }
     });
 
     return list;
-  }, [solunar.majorPeriods, solunar.minorPeriods]);
+  }, [solunar.majorPeriods, solunar.minorPeriods, isEpic, isPoor]);
 
   // Pointer move handler
   const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
@@ -252,7 +290,9 @@ export const TideFishChart3D: React.FC<TideFishChart3DProps> = ({ data, units, p
     setHoverData(null);
   };
 
-  const score = solunar.activityScore ?? 50;
+  const currentY = getY(currentHeightInterpolated);
+
+  // Use the advanced score instead of raw solunar activity score
   let overallLabel = 'Media';
   let overallColor = 'text-amber-400 bg-amber-950/60 border-amber-800';
 

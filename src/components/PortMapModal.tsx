@@ -354,8 +354,8 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
   if (!isOpen && !isEmbedded) return null;
 
   return (
-    <div className={isEmbedded ? "w-full animate-fade-in" : `fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-0 ${isFullScreen ? 'p-0' : 'sm:p-4'}`}>
-      <div className={isEmbedded ? "bg-slate-900 border border-slate-700/80 flex flex-col shadow-2xl overflow-hidden rounded-2xl w-full h-[75vh]" : `bg-slate-900 border border-slate-700/80 flex flex-col shadow-2xl overflow-hidden transition-all duration-300 ${isFullScreen ? 'w-screen h-screen rounded-none max-w-none max-h-none' : 'rounded-none sm:rounded-2xl w-full h-full sm:h-auto sm:max-w-5xl sm:max-h-[90vh]'}`}>
+    <div className={!isFullScreen && isEmbedded ? "w-full h-full flex flex-col animate-fade-in" : `fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-0 ${isFullScreen ? 'p-0' : 'sm:p-4'}`}>
+      <div className={!isFullScreen && isEmbedded ? "bg-slate-900 border-t flex-1 border-slate-800 flex flex-col overflow-hidden w-full h-full" : `bg-slate-900 border border-slate-700/80 flex flex-col shadow-2xl overflow-hidden transition-all duration-300 ${isFullScreen ? 'w-screen h-screen rounded-none max-w-none max-h-none' : 'rounded-none sm:rounded-2xl w-full h-full sm:h-[85vh] sm:max-w-5xl sm:max-h-[900px]'}`}>
         
         {/* Header */}
         <div className="p-3 sm:p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between shrink-0">
@@ -506,7 +506,7 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
         </div>
 
         {/* View Content */}
-        <div className={view === 'mapa' ? (isFullScreen ? 'relative flex-1 w-full h-full min-h-0 bg-slate-950 overflow-hidden' : 'relative flex-1 min-h-[420px] h-[55vh] sm:h-[500px] w-full bg-slate-950 overflow-hidden') : 'hidden'}>
+        <div className={view === 'mapa' ? 'relative flex-1 w-full h-full min-h-0 bg-slate-950 overflow-hidden' : 'hidden'}>
           <div ref={mapContainerRef} className="w-full h-full absolute inset-0 z-0" />
 
           {/* Map Controls Floating Overlay Top-Right */}
