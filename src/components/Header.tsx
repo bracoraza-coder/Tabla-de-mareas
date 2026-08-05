@@ -228,9 +228,9 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Logo & Mobile Quick Action Buttons */}
           <div className="flex items-center justify-between gap-2">
             <div 
-              onClick={onGoHome ? onGoHome : onOpenTideChart}
+              onClick={onGoHome}
               className="flex items-center gap-1.5 sm:gap-2 cursor-pointer group"
-              title={onGoHome ? "Ir a la página de inicio" : "Ver la gráfica de mareas"}
+              title="Ir a la página de inicio"
               id="header-logo-btn"
             >
               <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg shadow flex items-center justify-center text-white shrink-0 group-hover:scale-105 transition-transform">

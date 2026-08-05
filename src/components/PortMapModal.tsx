@@ -11,6 +11,7 @@ interface PortMapModalProps {
   onClose: () => void;
   selectedPort: Port;
   onSelectPort: (port: Port) => void;
+  isEmbedded?: boolean;
 }
 
 type MapLayerType = 'dark' | 'satellite' | 'streets';
@@ -111,6 +112,7 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
   onClose,
   selectedPort,
   onSelectPort,
+  isEmbedded = false,
 }) => {
   const [filterQuery, setFilterQuery] = useState('');
   const [selectedCountryFilter, setSelectedCountryFilter] = useState<string>('Todos');
@@ -143,7 +145,7 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
 
   // Auto-fit bounds or fly to target when user searches or filters by country
   useEffect(() => {
-    if (!mapInstanceRef.current || !isOpen || view !== 'mapa') return;
+    if (!mapInstanceRef.current || (!isOpen && !isEmbedded) || view !== 'mapa') return;
 
     if (filteredPorts.length === 1) {
       const target = filteredPorts[0];
@@ -152,27 +154,29 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
       const bounds = L.latLngBounds(filteredPorts.map(p => [p.lat, p.lng]));
       mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 11 });
     }
-  }, [filterQuery, selectedCountryFilter, isOpen, view]);
+  }, [filterQuery, selectedCountryFilter, isOpen, isEmbedded, view]);
 
   const handlePick = (port: Port) => {
     onSelectPort(port);
-    onClose();
+    if (!isEmbedded) onClose();
   };
 
   // Initialize or update Leaflet Map
   useEffect(() => {
-    if (!isOpen || !mapContainerRef.current) return;
+    if ((!isOpen && !isEmbedded) || !mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
       const map = L.map(mapContainerRef.current, {
         center: [selectedPort.lat, selectedPort.lng],
         zoom: 6,
-        zoomControl: true,
+        zoomControl: false,
         minZoom: 2,
         maxZoom: 18,
         maxBounds: [[-85, -180], [85, 180]],
         maxBoundsViscosity: 1.0,
       });
+
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
 
       const currentLayerCfg = MAP_LAYERS[mapLayer];
       const tiles = L.tileLayer(currentLayerCfg.url, {
@@ -200,11 +204,11 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
         clearTimeout(t3);
       };
     }
-  }, [isOpen, view, selectedPort]);
+  }, [isOpen, isEmbedded, view, selectedPort, isFullScreen]);
 
   // Clean up map when modal closes
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen && !isEmbedded) {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -213,7 +217,7 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
         userMarkerRef.current = null;
       }
     }
-  }, [isOpen]);
+  }, [isOpen, isEmbedded]);
 
   // Handle Layer change
   useEffect(() => {
@@ -347,24 +351,25 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
     );
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !isEmbedded) return null;
 
   return (
-    <div className={`fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-0 ${isFullScreen ? 'p-0' : 'sm:p-4'}`}>
-      <div className={`bg-slate-900 border border-slate-700/80 flex flex-col shadow-2xl overflow-hidden transition-all duration-300 ${isFullScreen ? 'w-screen h-screen rounded-none max-w-none max-h-none' : 'rounded-none sm:rounded-2xl w-full h-full sm:h-auto sm:max-w-5xl sm:max-h-[90vh]'}`}>
+    <div className={isEmbedded ? "w-full animate-fade-in" : `fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-0 ${isFullScreen ? 'p-0' : 'sm:p-4'}`}>
+      <div className={isEmbedded ? "bg-slate-900 border border-slate-700/80 flex flex-col shadow-2xl overflow-hidden rounded-2xl w-full h-[75vh]" : `bg-slate-900 border border-slate-700/80 flex flex-col shadow-2xl overflow-hidden transition-all duration-300 ${isFullScreen ? 'w-screen h-screen rounded-none max-w-none max-h-none' : 'rounded-none sm:rounded-2xl w-full h-full sm:h-auto sm:max-w-5xl sm:max-h-[90vh]'}`}>
         
         {/* Header */}
         <div className="p-3 sm:p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            {/* Back Button */}
-            <button
-              onClick={onClose}
-              className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border border-slate-700 shrink-0"
-              title="Volver a la pantalla anterior"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Atrás</span>
-            </button>
+            {!isEmbedded && (
+              <button
+                onClick={onClose}
+                className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border border-slate-700 shrink-0"
+                title="Volver a la pantalla anterior"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Atrás</span>
+              </button>
+            )}
             <div className="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-blue-600/30">
               <Map className="w-5 h-5" />
             </div>
@@ -379,15 +384,16 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Fullscreen Toggle Button */}
-            <button
-              onClick={() => setIsFullScreen(!isFullScreen)}
-              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-bold hidden md:flex items-center gap-1.5 transition-all cursor-pointer border border-slate-700 shadow-md"
-              title={isFullScreen ? 'Salir de pantalla completa' : 'Ver mapa en pantalla completa'}
-            >
-              {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-              <span>{isFullScreen ? 'Restaurar' : 'Pantalla Completa'}</span>
-            </button>
+            {!isEmbedded && (
+              <button
+                onClick={() => setIsFullScreen(!isFullScreen)}
+                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-bold hidden md:flex items-center gap-1.5 transition-all cursor-pointer border border-slate-700 shadow-md"
+                title={isFullScreen ? 'Salir de pantalla completa' : 'Ver mapa en pantalla completa'}
+              >
+                {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                <span>{isFullScreen ? 'Restaurar' : 'Pantalla Completa'}</span>
+              </button>
+            )}
 
             <div className="bg-slate-800 p-1 rounded-xl flex items-center gap-1 border border-slate-700">
               <button
@@ -410,13 +416,15 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
               </button>
             </div>
 
-            <button
-              onClick={onClose}
-              className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all cursor-pointer"
-              title="Cerrar"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            {!isEmbedded && (
+              <button
+                onClick={onClose}
+                className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all cursor-pointer"
+                title="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -498,14 +506,24 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
         </div>
 
         {/* View Content */}
-        <div className={view === 'mapa' ? 'relative flex-1 min-h-[420px] h-[55vh] sm:h-[500px] w-full bg-slate-950 overflow-hidden' : 'hidden'}>
+        <div className={view === 'mapa' ? (isFullScreen ? 'relative flex-1 w-full h-full min-h-0 bg-slate-950 overflow-hidden' : 'relative flex-1 min-h-[420px] h-[55vh] sm:h-[500px] w-full bg-slate-950 overflow-hidden') : 'hidden'}>
           <div ref={mapContainerRef} className="w-full h-full absolute inset-0 z-0" />
 
-          {/* Map Controls Floating Overlay */}
-          <div className="absolute top-3 right-3 z-[400] flex flex-col sm:flex-row items-end sm:items-center gap-2">
+          {/* Map Controls Floating Overlay Top-Right */}
+          <div className="absolute top-3 right-3 z-[400] flex flex-wrap items-center gap-2">
+            {/* Fullscreen Toggle Button (Visible on all devices) */}
+            <button
+              onClick={() => setIsFullScreen(!isFullScreen)}
+              className="px-3 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-cyan-400 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border border-slate-700 shadow-xl backdrop-blur-md"
+              title={isFullScreen ? 'Salir de pantalla completa' : 'Ver mapa en pantalla completa'}
+            >
+              {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              <span className="hidden sm:inline">{isFullScreen ? 'Restaurar' : 'Pantalla Completa'}</span>
+            </button>
+
             {/* Layer Switcher */}
             <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-1 shadow-xl flex items-center gap-1 backdrop-blur-md">
-              <Layers className="w-3.5 h-3.5 text-cyan-400 ml-2 mr-1" />
+              <Layers className="w-3.5 h-3.5 text-cyan-400 ml-2 mr-1 hidden sm:block" />
               {(['dark', 'satellite', 'streets'] as MapLayerType[]).map((layer) => (
                 <button
                   key={layer}
@@ -526,7 +544,7 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
               className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xl transition-all cursor-pointer border border-blue-400/50 backdrop-blur-md"
             >
               <Navigation className={`w-3.5 h-3.5 fill-white ${isLocating ? 'animate-spin' : ''}`} />
-              <span>{isLocating ? 'Buscando GPS...' : '📍 Mi Ubicación'}</span>
+              <span>{isLocating ? 'Buscando...' : '📍 GPS'}</span>
             </button>
           </div>
 

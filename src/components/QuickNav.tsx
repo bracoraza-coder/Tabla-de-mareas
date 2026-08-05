@@ -1,7 +1,7 @@
 import React from 'react';
-import { LineChart, Waves, Moon, Wind, CalendarDays } from 'lucide-react';
+import { LineChart, Waves, Moon, Wind, CalendarDays, Map } from 'lucide-react';
 
-export type TabKey = 'grafico' | 'surf' | 'pesca' | 'meteo' | 'calendario';
+export type TabKey = 'grafico' | 'surf' | 'pesca' | 'meteo' | 'calendario' | 'mapa';
 
 interface QuickNavProps {
   active: TabKey;
@@ -50,6 +50,13 @@ const ITEMS: {
     activeClass: 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-lg shadow-rose-500/30 border-rose-300 ring-2 ring-rose-400/40 font-black scale-105',
     inactiveClass: 'bg-rose-950/40 text-rose-300 border-rose-800/60 hover:bg-rose-900/50 hover:text-rose-200'
   },
+  { 
+    id: 'mapa', 
+    label: 'Mapa', 
+    icon: <Map className="w-4 h-4 sm:w-5 sm:h-5" />,
+    activeClass: 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30 border-blue-300 ring-2 ring-blue-400/40 font-black scale-105',
+    inactiveClass: 'bg-blue-950/40 text-blue-300 border-blue-800/60 hover:bg-blue-900/50 hover:text-blue-200'
+  },
 ];
 
 export const QuickNav: React.FC<QuickNavProps> = ({ active, onChange }) => {
@@ -59,14 +66,14 @@ export const QuickNav: React.FC<QuickNavProps> = ({ active, onChange }) => {
       className="bg-slate-950/80 py-1 sm:py-1.5 px-1 sm:px-2 rounded-xl border border-slate-800/80 shadow-inner my-1 transition-all"
       id="sticky-main-quicknav"
     >
-      <div className="max-w-5xl mx-auto grid grid-cols-5 gap-1 sm:gap-2">
+      <div className="max-w-5xl mx-auto grid grid-cols-6 gap-1 sm:gap-1.5">
         {ITEMS.map(item => {
           const isActive = active === item.id;
           return (
             <button
               key={item.id}
               onClick={() => onChange(item.id)}
-              className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 py-1 px-1 sm:py-1.5 sm:px-2.5 rounded-lg border text-[10px] sm:text-xs tracking-tight transition-all cursor-pointer font-bold select-none ${
+              className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 py-1 px-1 sm:py-1.5 sm:px-2 rounded-lg border text-[10px] sm:text-xs tracking-tight transition-all cursor-pointer font-bold select-none ${
                 isActive ? item.activeClass : item.inactiveClass
               }`}
               id={`nav-tab-${item.id}`}

@@ -1,7 +1,7 @@
 {
-  "name": "Tabla de Mareas Pro & Telemetría Marina",
-  "short_name": "Tabla de Mareas",
-  "description": "Tabla de mareas y previsión de surf en tiempo real, con datos de swell, viento y gráfico solunar para puertos y costas de España e Iberoamérica.",
+  "name": "InfoMarea Pro & Telemetría Marina",
+  "short_name": "InfoMarea",
+  "description": "Tabla de mareas y previsión de surf en tiempo real, con datos de swell, viento y gráfico solunar para puertos y costas de España e Iberoamérica en infomarea.com.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#020617",

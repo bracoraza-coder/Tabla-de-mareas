@@ -149,7 +149,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                   En cumplimiento del artículo 10 de la Ley 34/2002, de 11 de julio, de Servicios de la Sociedad de la Información y Comercio Electrónico (LSSI-CE), se facilitan a continuación los datos informativos de la aplicación:
                 </p>
                 <ul className="list-disc pl-5 space-y-1 text-slate-400 font-mono text-xs">
-                  <li><strong>Denominación del Servicio:</strong> Tabla de Mareas Pro (Modelo Astronómico + Meteo en Vivo)</li>
+                  <li><strong>Denominación del Servicio:</strong> InfoMarea Pro (infomarea.com)</li>
                   <li><strong>Finalidad:</strong> Consulta de datos hidrométricos, previsiones meteorológicas y actividad solunar náutica.</li>
                   <li><strong>Dominio y Entorno:</strong> Aplicación web estática (Vercel), sin servidor backend propio.</li>
                   <li><strong>Contacto Técnico:</strong> soporte-nautico@mareaspro.app</li>

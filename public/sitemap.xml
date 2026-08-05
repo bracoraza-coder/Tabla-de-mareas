@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://tabla-de-mareas.vercel.app/</loc>
-    <lastmod>2026-07-29</lastmod>
+    <loc>https://infomarea.com/</loc>
+    <lastmod>2026-08-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://tabla-de-mareas.vercel.app/mareas/isla-cristina</loc>
-    <lastmod>2026-07-29</lastmod>
+    <loc>https://infomarea.com/mareas/isla-cristina</loc>
+    <lastmod>2026-08-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>

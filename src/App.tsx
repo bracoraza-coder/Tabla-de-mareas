@@ -224,6 +224,21 @@ export default function App() {
             }} 
           />
         );
+      case 'mapa':
+        return (
+          <div className="space-y-6">
+            <PortMapModal
+              isOpen={true}
+              onClose={() => {}}
+              selectedPort={selectedPort}
+              onSelectPort={(port) => {
+                handleSelectPort(port);
+                setActiveTab('grafico');
+              }}
+              isEmbedded={true}
+            />
+          </div>
+        );
       default:
         return null;
     }
@@ -240,13 +255,18 @@ export default function App() {
         onToggleFavorite={toggleFavorite}
         units={units}
         onChangeUnits={setUnits}
-        onOpenMapModal={() => setIsMapOpen(true)}
+        onOpenMapModal={() => {
+          setActiveTab('mapa');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
         onOpenTideChart={handleOpenTideChart}
         onGoHome={() => {
           setHasUserDefinedPort(false);
+          setActiveTab('grafico');
           try {
             localStorage.removeItem('mareas_selected_port_id');
           } catch {}
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         notificationSettings={notificationSettings}
         onOpenNotificationsModal={() => setIsNotificationsOpen(true)}
@@ -262,10 +282,26 @@ export default function App() {
       />
 
       <main className="max-w-6xl mx-auto p-4 space-y-6 animate-fade-in mt-4">
-        {!hasUserDefinedPort ? (
+        {activeTab === 'mapa' ? (
+          <div className="space-y-6">
+            <PortMapModal
+              isOpen={true}
+              onClose={() => setActiveTab('grafico')}
+              selectedPort={selectedPort}
+              onSelectPort={(port) => {
+                handleSelectPort(port);
+                setActiveTab('grafico');
+              }}
+              isEmbedded={true}
+            />
+          </div>
+        ) : !hasUserDefinedPort ? (
           <WelcomeHome
             onSelectPort={handleSelectPort}
-            onOpenMapModal={() => setIsMapOpen(true)}
+            onOpenMapModal={() => {
+              setActiveTab('mapa');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
           />
         ) : (
           renderTabContent()
