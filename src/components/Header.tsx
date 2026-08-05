@@ -161,7 +161,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="bg-slate-900 text-white border-b-2 border-blue-600 sticky top-0 z-40 shadow-xl">
+    <header className="bg-slate-900 text-white border-b-2 border-blue-600 sticky top-0 z-50 shadow-xl">
       {/* Top Banner Bar - Hidden on small mobile to save space, visible on tablet+ */}
       <div className="hidden sm:flex bg-slate-950 px-3 py-0.5 text-[10px] text-slate-300 border-b border-slate-800/80 justify-between items-center gap-2">
         <div className="flex items-center gap-1.5 font-mono text-[10px]">

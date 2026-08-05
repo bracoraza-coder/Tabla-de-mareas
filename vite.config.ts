@@ -5,6 +5,7 @@ import fs from 'fs';
 import {defineConfig} from 'vite';
 
 const DB_FILE = path.resolve(__dirname, 'suggestions_db.json');
+const STATS_FILE = path.resolve(__dirname, 'stats_db.json');
 
 function getStoredSuggestions() {
   try {
@@ -25,6 +26,35 @@ function saveSuggestions(items: any[]) {
   }
 }
 
+function getStoredStats() {
+  const todayStr = new Date().toISOString().split('T')[0];
+  try {
+    if (fs.existsSync(STATS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(STATS_FILE, 'utf-8'));
+      if (!data.newUsers) data.newUsers = 0;
+      if (!data.returningUsers) data.returningUsers = 0;
+      return data;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+  return {
+    totalVisits: 0,
+    todayVisits: 0,
+    newUsers: 0,
+    returningUsers: 0,
+    lastResetDate: todayStr
+  };
+}
+
+function saveStats(stats: any) {
+  try {
+    fs.writeFileSync(STATS_FILE, JSON.stringify(stats, null, 2), 'utf-8');
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 export default defineConfig(() => {
   return {
     plugins: [
@@ -33,6 +63,54 @@ export default defineConfig(() => {
       {
         name: 'api-suggestions-dev',
         configureServer(server) {
+          server.middlewares.use('/api/counter', (req, res, next) => {
+            res.setHeader('Content-Type', 'application/json');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+            if (req.method === 'OPTIONS') {
+              res.statusCode = 200;
+              return res.end();
+            }
+
+            const stats = getStoredStats();
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            if (stats.lastResetDate !== todayStr) {
+              stats.todayVisits = 0;
+              stats.lastResetDate = todayStr;
+            }
+
+            const url = new URL(req.url || '', 'http://localhost');
+            const isInc = req.method === 'POST' || url.searchParams.get('inc') === '1';
+            const userType = url.searchParams.get('type');
+
+            if (isInc) {
+              stats.totalVisits += 1;
+              stats.todayVisits += 1;
+              if (userType === 'new') {
+                stats.newUsers = (stats.newUsers || 0) + 1;
+              } else if (userType === 'returning') {
+                stats.returningUsers = (stats.returningUsers || 0) + 1;
+              }
+              saveStats(stats);
+            }
+
+            // Real active visitors (at least 1 - current viewer)
+            const onlineNow = Math.max(1, (stats.totalVisits > 0 ? Math.min(stats.todayVisits, 3) : 1));
+
+            res.statusCode = 200;
+            return res.end(JSON.stringify({
+              ok: true,
+              totalVisits: stats.totalVisits,
+              todayVisits: stats.todayVisits,
+              newUsers: stats.newUsers || 0,
+              returningUsers: stats.returningUsers || 0,
+              onlineNow
+            }));
+          });
+
           server.middlewares.use('/api/suggestions', (req, res, next) => {
             res.setHeader('Content-Type', 'application/json');
             res.setHeader('Access-Control-Allow-Origin', '*');

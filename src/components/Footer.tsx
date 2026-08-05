@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Waves, ShieldAlert, BookOpen, Scale, FileText, Lock, Cookie, Anchor, MessageSquarePlus, Send, X, CheckCircle, ShieldCheck, Trash2, Mail, Calendar, RefreshCw, Key } from 'lucide-react';
+import { Waves, ShieldAlert, BookOpen, Scale, FileText, Lock, Cookie, Anchor, MessageSquarePlus, Send, X, CheckCircle, ShieldCheck, Trash2, Mail, Calendar, RefreshCw, Key, Users } from 'lucide-react';
 import { PORTS_DATABASE } from '../data/portsData';
 import { Port } from '../types';
 import { LegalTab } from './LegalModal';
 import { buildPortPath } from '../utils/router';
+import { VisitorCounter } from './VisitorCounter';
 
 interface FooterProps {
   onSelectPort: (port: Port) => void;
@@ -305,7 +306,7 @@ export const Footer: React.FC<FooterProps> = ({ onSelectPort, onOpenLegal }) => 
               className="text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1.5 cursor-pointer font-medium bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-1 rounded-md"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Ver Sugerencias (Admin)</span>
+              <span>Ver Sugerencias y Estadísticas (Admin)</span>
             </button>
           </div>
         </div>
@@ -470,6 +471,8 @@ export const Footer: React.FC<FooterProps> = ({ onSelectPort, onOpenLegal }) => 
               </form>
             ) : (
               <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+                <VisitorCounter variant="full" />
+
                 <div className="flex items-center justify-between text-xs text-slate-400 bg-slate-950 p-3 rounded-xl border border-slate-800 shrink-0">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-white">Buzón activo:</span>

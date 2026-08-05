@@ -283,7 +283,7 @@ export default function App() {
       />
 
       {activeTab === 'mapa' ? (
-        <main className="flex-1 w-full flex flex-col overflow-hidden animate-fade-in">
+        <main className="flex-1 w-full flex flex-col overflow-hidden animate-fade-in min-h-[600px] h-[calc(100vh-120px)]">
           <PortMapModal
             isOpen={true}
             onClose={() => setActiveTab('grafico')}

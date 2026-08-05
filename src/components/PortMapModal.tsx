@@ -19,7 +19,7 @@ type MapLayerType = 'dark' | 'satellite' | 'streets';
 const MAP_LAYERS: Record<MapLayerType, { name: string; url: string; subdomains?: string; attribution: string }> = {
   dark: {
     name: 'Oscuro Marítimo',
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
     subdomains: 'abcd',
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
   },
@@ -166,37 +166,48 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
     if ((!isOpen && !isEmbedded) || !mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
-      const map = L.map(mapContainerRef.current, {
-        center: [selectedPort.lat, selectedPort.lng],
-        zoom: 6,
-        zoomControl: false,
-        minZoom: 2,
-        maxZoom: 18,
-        maxBounds: [[-85, -180], [85, 180]],
-        maxBoundsViscosity: 1.0,
-      });
+      // Safely reset container's leaflet ID if DOM element was reused
+      if ((mapContainerRef.current as any)._leaflet_id) {
+        delete (mapContainerRef.current as any)._leaflet_id;
+      }
 
-      L.control.zoom({ position: 'bottomright' }).addTo(map);
+      try {
+        const map = L.map(mapContainerRef.current, {
+          center: [selectedPort.lat, selectedPort.lng],
+          zoom: 6,
+          zoomControl: false,
+          minZoom: 2,
+          maxZoom: 18,
+          maxBounds: [[-85, -180], [85, 180]],
+          maxBoundsViscosity: 1.0,
+        });
 
-      const currentLayerCfg = MAP_LAYERS[mapLayer];
-      const tiles = L.tileLayer(currentLayerCfg.url, {
-        attribution: currentLayerCfg.attribution,
-        subdomains: currentLayerCfg.subdomains || 'abc',
-        maxZoom: 18,
-        noWrap: true,
-      }).addTo(map);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      tileLayerRef.current = tiles;
-      markersGroupRef.current = L.layerGroup().addTo(map);
-      mapInstanceRef.current = map;
+        const currentLayerCfg = MAP_LAYERS[mapLayer];
+        const tiles = L.tileLayer(currentLayerCfg.url, {
+          attribution: currentLayerCfg.attribution,
+          subdomains: currentLayerCfg.subdomains || 'abc',
+          maxZoom: 18,
+          noWrap: true,
+        }).addTo(map);
+
+        tileLayerRef.current = tiles;
+        markersGroupRef.current = L.layerGroup().addTo(map);
+        mapInstanceRef.current = map;
+      } catch (err) {
+        console.error("Error initializing Leaflet map:", err);
+      }
     } else {
       mapInstanceRef.current.setView([selectedPort.lat, selectedPort.lng], mapInstanceRef.current.getZoom() || 6);
     }
 
-    if (view === 'mapa') {
-      const t1 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 50);
-      const t2 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 200);
-      const t3 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 500);
+    if (view === 'mapa' && mapInstanceRef.current) {
+      const invalidate = () => mapInstanceRef.current?.invalidateSize();
+      invalidate();
+      const t1 = setTimeout(invalidate, 50);
+      const t2 = setTimeout(invalidate, 250);
+      const t3 = setTimeout(invalidate, 600);
 
       return () => {
         clearTimeout(t1);
@@ -354,8 +365,8 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
   if (!isOpen && !isEmbedded) return null;
 
   return (
-    <div className={!isFullScreen && isEmbedded ? "w-full h-full flex flex-col animate-fade-in" : `fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-0 ${isFullScreen ? 'p-0' : 'sm:p-4'}`}>
-      <div className={!isFullScreen && isEmbedded ? "bg-slate-900 border-t flex-1 border-slate-800 flex flex-col overflow-hidden w-full h-full" : `bg-slate-900 border border-slate-700/80 flex flex-col shadow-2xl overflow-hidden transition-all duration-300 ${isFullScreen ? 'w-screen h-screen rounded-none max-w-none max-h-none' : 'rounded-none sm:rounded-2xl w-full h-full sm:h-[85vh] sm:max-w-5xl sm:max-h-[900px]'}`}>
+    <div className={!isFullScreen && isEmbedded ? "w-full min-h-[600px] sm:min-h-[700px] flex-1 flex flex-col animate-fade-in" : `fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-0 ${isFullScreen ? 'p-0' : 'sm:p-4'}`}>
+      <div className={!isFullScreen && isEmbedded ? "bg-slate-900 border-t flex-1 border-slate-800 flex flex-col overflow-hidden w-full min-h-[600px] sm:min-h-[700px]" : `bg-slate-900 border border-slate-700/80 flex flex-col shadow-2xl overflow-hidden transition-all duration-300 ${isFullScreen ? 'w-screen h-screen rounded-none max-w-none max-h-none' : 'rounded-none sm:rounded-2xl w-full h-full sm:h-[85vh] sm:max-w-5xl sm:max-h-[900px]'}`}>
         
         {/* Header */}
         <div className="p-3 sm:p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between shrink-0">
@@ -506,11 +517,11 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
         </div>
 
         {/* View Content */}
-        <div className={view === 'mapa' ? 'relative flex-1 w-full h-full min-h-0 bg-slate-950 overflow-hidden' : 'hidden'}>
-          <div ref={mapContainerRef} className="w-full h-full absolute inset-0 z-0" />
+        <div className={view === 'mapa' ? 'relative flex-1 w-full h-full min-h-[500px] bg-slate-950 overflow-hidden isolate z-0' : 'hidden'}>
+          <div ref={mapContainerRef} className="w-full h-full min-h-[500px] absolute inset-0 z-0" />
 
           {/* Map Controls Floating Overlay Top-Right */}
-          <div className="absolute top-3 right-3 z-[400] flex flex-wrap items-center gap-2">
+          <div className="absolute top-3 right-3 z-20 flex flex-wrap items-center gap-2">
             {/* Fullscreen Toggle Button (Visible on all devices) */}
             <button
               onClick={() => setIsFullScreen(!isFullScreen)}
@@ -550,7 +561,7 @@ export const PortMapModal: React.FC<PortMapModalProps> = ({
 
           {/* GPS Toast Status */}
           {gpsStatus && (
-            <div className="absolute bottom-4 left-4 z-[400] bg-blue-950/90 border border-blue-500/80 text-blue-200 text-xs font-semibold px-3 py-1.5 rounded-xl shadow-2xl flex items-center gap-2 backdrop-blur-md animate-fade-in">
+            <div className="absolute bottom-4 left-4 z-20 bg-blue-950/90 border border-blue-500/80 text-blue-200 text-xs font-semibold px-3 py-1.5 rounded-xl shadow-2xl flex items-center gap-2 backdrop-blur-md animate-fade-in">
               <Compass className="w-4 h-4 text-cyan-400 animate-spin" />
               <span>{gpsStatus}</span>
             </div>
