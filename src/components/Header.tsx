@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Port, UserUnits, NotificationSettings } from '../types';
 import { PORTS_DATABASE } from '../data/portsData';
+import { searchPorts } from '../utils/searchHelper';
 import { buildPortPath } from '../utils/router';
 import { getZonedParts } from '../utils/timezoneHelpers';
 import { QuickNav, TabKey } from './QuickNav';
@@ -74,11 +75,9 @@ export const Header: React.FC<HeaderProps> = ({
   const [isUnitsOpen, setIsUnitsOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  const filteredPorts = PORTS_DATABASE.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.region.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.country.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredPorts = searchQuery.trim()
+    ? searchPorts(PORTS_DATABASE, searchQuery).map(r => r.port)
+    : PORTS_DATABASE;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
