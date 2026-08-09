@@ -13,7 +13,6 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
-    "express": "^5.2.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
@@ -22,8 +21,6 @@
     "vite": "^6.2.3"
   },
   "devDependencies": {
-    "@napi-rs/canvas": "^1.0.3",
-    "@types/express": "^5.0.6",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",

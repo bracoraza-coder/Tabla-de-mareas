@@ -242,17 +242,7 @@ function extractTideEvents(raw) {
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=1800'); // edge cache 30 min
 
-  const { port, portName, date, debug } = req.query;
-
-  // Diagnostic mode: shows exactly what the IHM responded, raw, so we can
-  // fix the parsing against real data instead of guessing blindly.
-  if (debug) {
-    const listDiag = await fetchDiagnostic(`${IHM_BASE}?request=getlist&format=json`);
-    const dateParam = (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toISOString().slice(0, 10)).replace(/-/g, '');
-    const tideDiag = await fetchDiagnostic(`${IHM_BASE}?request=gettide&id=${encodeURIComponent(port || '6')}&format=json&date=${dateParam}`);
-    res.status(200).json({ debug: true, getlist: listDiag, gettide: tideDiag });
-    return;
-  }
+  const { port, portName, date } = req.query;
 
   if (!portName || typeof portName !== 'string') {
     res.status(400).json({ ok: false, error: 'Falta el parámetro portName (nombre del puerto a buscar).' });
