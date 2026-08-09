@@ -146,7 +146,16 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const { tideData, weatherData, loading, error } = useRealTideData(selectedPort, selectedDate);
+  const { 
+    tideData, 
+    weatherData, 
+    loading, 
+    error,
+    isLiveApi,
+    apiLoading,
+    apiError,
+    dataSource
+  } = useRealTideData(selectedPort, selectedDate);
 
   const toggleFavorite = (portId: string) => {
     setFavorites(prev => 
@@ -280,6 +289,9 @@ export default function App() {
           setActiveTab(tab);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
+        isLiveApi={isLiveApi}
+        dataSource={dataSource}
+        apiError={apiError}
       />
 
       {activeTab === 'mapa' ? (

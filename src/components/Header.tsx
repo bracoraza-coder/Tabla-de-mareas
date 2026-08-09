@@ -18,10 +18,13 @@ import {
   Sun,
   Moon,
   LineChart,
-  X
+  X,
+  Crosshair,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 import { Port, UserUnits, NotificationSettings } from '../types';
-import { PORTS_DATABASE } from '../data/portsData';
+import { PORTS_DATABASE, createCustomGpsPort } from '../data/portsData';
 import { searchPorts } from '../utils/searchHelper';
 import { buildPortPath } from '../utils/router';
 import { getZonedParts } from '../utils/timezoneHelpers';
@@ -47,6 +50,9 @@ interface HeaderProps {
   onToggleTheme: () => void;
   activeTab?: TabKey;
   onTabChange?: (tab: TabKey) => void;
+  isLiveApi?: boolean;
+  dataSource?: 'open-meteo' | 'fallback-matematico';
+  apiError?: string | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -69,11 +75,20 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleTheme,
   activeTab,
   onTabChange,
+  isLiveApi = true,
+  dataSource = 'open-meteo',
+  apiError = null,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isUnitsOpen, setIsUnitsOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+
+  // Custom GPS Modal State
+  const [isCustomGpsOpen, setIsCustomGpsOpen] = useState(false);
+  const [customLat, setCustomLat] = useState('39.6015');
+  const [customLng, setCustomLng] = useState('-9.0710');
+  const [customName, setCustomName] = useState('Mi Spot Personalizado');
 
   const filteredPorts = searchQuery.trim()
     ? searchPorts(PORTS_DATABASE, searchQuery).map(r => r.port)
@@ -96,6 +111,21 @@ export const Header: React.FC<HeaderProps> = ({
 
   const [isLocatingGPS, setIsLocatingGPS] = useState(false);
   const [gpsFeedback, setGpsFeedback] = useState<string | null>(null);
+
+  const handleCustomGpsSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const latNum = parseFloat(customLat);
+    const lngNum = parseFloat(customLng);
+    if (isNaN(latNum) || isNaN(lngNum)) {
+      alert('Por favor introduce coordenadas válidas (Latitud y Longitud en grados decimales).');
+      return;
+    }
+    const newPort = createCustomGpsPort(latNum, lngNum, customName.trim() || undefined);
+    onSelectPort(newPort);
+    setIsCustomGpsOpen(false);
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
 
   // Format date string for input - built directly from local Y/M/D digits,
   // not toISOString() (which converts to UTC and can silently roll over to
@@ -164,16 +194,34 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="bg-slate-900 text-white border-b-2 border-blue-600 sticky top-0 z-50 shadow-xl">
       {/* Top Banner Bar - Hidden on small mobile to save space, visible on tablet+ */}
       <div className="hidden sm:flex bg-slate-950 px-3 py-0.5 text-[10px] text-slate-300 border-b border-slate-800/80 justify-between items-center gap-2">
-        <div className="flex items-center gap-1.5 font-mono text-[10px]">
-          <span className="flex h-1.5 w-1.5 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-          </span>
-          <span className="text-slate-300 uppercase tracking-wider font-bold">MODELO ASTRONÓMICO</span>
+        <div className="flex items-center gap-2 font-mono text-[10px]">
+          {isLiveApi ? (
+            <span className="flex items-center gap-1.5 bg-emerald-950/80 border border-emerald-800/80 text-emerald-300 px-2 py-0.5 rounded-md font-bold">
+              <span className="flex h-1.5 w-1.5 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+              </span>
+              <span>🌐 API Abierta Open-Meteo (En Vivo)</span>
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 bg-amber-950/80 border border-amber-800/80 text-amber-300 px-2 py-0.5 rounded-md font-bold" title={apiError || 'Modo Offline activo'}>
+              <AlertTriangle className="w-3 h-3 text-amber-400" />
+              <span>⚡ Modo Fallback Matemático (Offline)</span>
+            </span>
+          )}
           <span className="text-slate-600">•</span>
-          <span className="text-blue-400">METEO EN VIVO (OPEN-METEO)</span>
+          <span className="text-slate-400 uppercase tracking-wider font-semibold">Cálculo de Mareas Armónicas + Viento Vectorial</span>
         </div>
         <div className="flex items-center gap-2.5 text-slate-300 text-[11px]">
+          <button
+            onClick={() => setIsCustomGpsOpen(true)}
+            className="hover:text-cyan-300 text-cyan-400 flex items-center gap-1 transition-colors cursor-pointer font-bold"
+            title="Ingresar coordenadas GPS globales personalizadas"
+          >
+            <Crosshair className="w-3 h-3 text-cyan-400" />
+            <span>Spot Coordenadas GPS</span>
+          </button>
+          <span className="text-slate-700">|</span>
           {onGoHome && (
             <>
               <button 
@@ -348,12 +396,32 @@ export const Header: React.FC<HeaderProps> = ({
               {/* Autocomplete Dropdown */}
               {isSearchOpen && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 max-h-80 overflow-y-auto divide-y divide-slate-800">
-                  <div className="p-2 text-[10px] font-mono font-bold text-blue-400 uppercase tracking-wider bg-slate-950">
-                    {searchQuery ? 'Resultados de búsqueda' : 'Estaciones Principales'}
+                  <div className="p-2 text-[10px] font-mono font-bold text-blue-400 uppercase tracking-wider bg-slate-950 flex items-center justify-between">
+                    <span>{searchQuery ? 'Resultados de búsqueda' : 'Estaciones Principales'}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomGpsOpen(true);
+                        setIsSearchOpen(false);
+                      }}
+                      className="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <Crosshair className="w-3 h-3" /> + Spot por Coordenadas
+                    </button>
                   </div>
                   {filteredPorts.length === 0 ? (
-                    <div className="p-4 text-center text-xs text-slate-400">
-                      No se encontraron puertos para "{searchQuery}"
+                    <div className="p-4 text-center space-y-2">
+                      <div className="text-xs text-slate-400">No se encontraron puertos para "{searchQuery}"</div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomGpsOpen(true);
+                          setIsSearchOpen(false);
+                        }}
+                        className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-bold text-xs rounded-lg inline-flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Crosshair className="w-3.5 h-3.5" /> Ingresar Coordenadas GPS para "{searchQuery}"
+                      </button>
                     </div>
                   ) : (
                     filteredPorts.map((port) => (
@@ -660,6 +728,102 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         )}
       </div>
+
+      {/* Custom GPS Coordinates Modal */}
+      {isCustomGpsOpen && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2 text-cyan-400 font-bold">
+                <Crosshair className="w-5 h-5" />
+                <h3 className="text-base text-white font-black uppercase tracking-tight">
+                  Consulta de Spot por Coordenadas
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCustomGpsOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Introduce cualquier coordenada de Latitud y Longitud del planeta para consultar la API en tiempo real de Open-Meteo Marine & Weather.
+            </p>
+
+            <form onSubmit={handleCustomGpsSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-mono text-slate-400 uppercase tracking-wider mb-1">
+                  Nombre del Spot / Ubicación
+                </label>
+                <input
+                  type="text"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  placeholder="Ej. Nazaré Praia do Norte"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-mono text-slate-400 uppercase tracking-wider mb-1">
+                    Latitud (° Decimal)
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={customLat}
+                    onChange={(e) => setCustomLat(e.target.value)}
+                    placeholder="Ej. 39.6015"
+                    required
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-mono text-slate-400 uppercase tracking-wider mb-1">
+                    Longitud (° Decimal)
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={customLng}
+                    onChange={(e) => setCustomLng(e.target.value)}
+                    placeholder="Ej. -9.0710"
+                    required
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-cyan-950/40 border border-cyan-800/50 rounded-xl p-3 text-[11px] text-cyan-200 flex items-start gap-2">
+                <Globe className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                <span>
+                  Al pulsar Consultar, la aplicación se conectará directamente a la API marina global para obtener oleaje, viento, presión y temperatura.
+                </span>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCustomGpsOpen(false)}
+                  className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-lg shadow-cyan-600/30 transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Crosshair className="w-3.5 h-3.5" /> Consultar Spot
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
