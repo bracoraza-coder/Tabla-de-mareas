@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import fs from 'fs';
 import {defineConfig} from 'vite';
+// @ts-ignore
+import mareasHandler from './api/mareas.js';
 
 const DB_FILE = path.resolve(__dirname, 'suggestions_db.json');
 const STATS_FILE = path.resolve(__dirname, 'stats_db.json');
@@ -183,6 +185,29 @@ export default defineConfig(() => {
             }
 
             next();
+          });
+
+          server.middlewares.use('/api/mareas', async (req, res) => {
+            try {
+              const url = new URL(req.url || '', 'http://localhost');
+              const queryParams: Record<string, string> = {};
+              url.searchParams.forEach((val, key) => { queryParams[key] = val; });
+              (req as any).query = queryParams;
+              (res as any).status = (code: number) => {
+                res.statusCode = code;
+                return res;
+              };
+              (res as any).json = (data: any) => {
+                res.setHeader('Content-Type', 'application/json');
+                return res.end(JSON.stringify(data));
+              };
+              await mareasHandler(req, res);
+            } catch (err) {
+              console.error('Error in /api/mareas middleware:', err);
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ ok: false, error: 'Error interno en mareas API' }));
+            }
           });
         }
       }

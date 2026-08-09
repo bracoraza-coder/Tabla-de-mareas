@@ -14,6 +14,8 @@ import {
 import { TideDayData, Port, UserUnits } from '../types';
 import { formatZonedHHMM, getZoneAbbreviation } from '../utils/timezoneHelpers';
 
+import { WaterLevelCanvasGauge } from './gauges/WaterLevelCanvasGauge';
+
 interface CurrentTideGaugeProps {
   dayData: TideDayData;
   port: Port;
@@ -293,6 +295,9 @@ export const CurrentTideGauge: React.FC<CurrentTideGaugeProps> = ({
           </div>
 
         </div>
+
+        {/* MÓDULO 2: Canvas Retina 2D Water Level Simulator */}
+        <WaterLevelCanvasGauge dayData={dayData} port={port} units={units} />
 
       </div>
     </div>

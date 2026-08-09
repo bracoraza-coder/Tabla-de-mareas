@@ -1,7 +1,9 @@
 import React from 'react';
 import { TideDayData, MarineWeather, Port, UserUnits } from '../types';
-import { Waves, Wind, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { Waves, Wind, AlertTriangle, CheckCircle, Info, Compass } from 'lucide-react';
 import { SurfDiagram } from './gauges/SurfDiagram';
+import { getEffectiveBeachAngle } from '../data/portsData';
+import { getWindTypeAndRating } from '../utils/mathHelpers';
 
 interface SurfSectionProps {
   dayData: TideDayData;
@@ -11,9 +13,10 @@ interface SurfSectionProps {
 }
 
 export const SurfSection: React.FC<SurfSectionProps> = ({ dayData, weather, port, units }) => {
-  
-  // Refined realistic surf calculation
-  const isOffshore = weather.windDegrees >= 45 && weather.windDegrees <= 135; 
+  const beachAngle = getEffectiveBeachAngle(port);
+  const windInfo = getWindTypeAndRating(weather.windDegrees, beachAngle);
+
+  const isOffshore = windInfo.isOffshore;
   const isLightWind = weather.windSpeedKnots <= 10;
   
   const isInland = port.region.toLowerCase().includes('río') || 
@@ -68,19 +71,18 @@ export const SurfSection: React.FC<SurfSectionProps> = ({ dayData, weather, port
   else if (weather.wavePeriodSeconds >= 7) periodScore = 20;
   else periodScore = 5;
 
-  // Wind score
+  // Wind score based on vectorial classification
   let windScore = 0;
-  if (isOffshore) windScore = 25;
+  if (windInfo.isOffshore) windScore = 25; // Terral
   else if (isLightWind) windScore = 15;
   else windScore = 5;
 
   let rating = Math.min(100, waveScore + periodScore + windScore);
 
-  // Strict limits to prevent high ratings on flat days
   if (weather.waveHeightMeters < 0.4) {
-    rating = Math.min(rating, 15); // Completely flat, restrict to poor
+    rating = Math.min(rating, 15);
   } else if (weather.waveHeightMeters < 0.7) {
-    rating = Math.min(rating, 45); // Very small, restrict to regular at best
+    rating = Math.min(rating, 45);
   }
 
   let ratingText = 'Condiciones Pobres';
@@ -98,10 +100,10 @@ export const SurfSection: React.FC<SurfSectionProps> = ({ dayData, weather, port
       <div className="flex items-center justify-between pb-4 border-b border-slate-800">
         <div className="flex items-center gap-2">
           <Waves className="w-5 h-5 text-teal-400" />
-          <h2 className="text-xl font-bold text-white tracking-tight">Reporte de Surf & Pronóstico</h2>
+          <h2 className="text-xl font-bold text-white tracking-tight">Reporte de Surf & Viento Costero Vectorial</h2>
         </div>
         <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-teal-950/80 text-teal-300 border border-teal-800/80 font-bold">
-          Spot: {port.name}
+          Spot: {port.name} (Playa {beachAngle}°)
         </span>
       </div>
 
@@ -116,10 +118,11 @@ export const SurfSection: React.FC<SurfSectionProps> = ({ dayData, weather, port
           <div className="text-xs text-slate-400 font-mono mt-0.5">Puntuación General: {rating}/100</div>
         </div>
 
-        {/* Detailed Ocean Metrics */}
+        {/* Detailed Ocean Metrics & Vectorial Wind */}
         <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-4">
-          <h3 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2">
-            Parámetros del Mar
+          <h3 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center justify-between">
+            <span>Parámetros del Mar y Régimen de Viento</span>
+            <Compass className="w-4 h-4 text-teal-400" />
           </h3>
           
           <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
@@ -131,27 +134,49 @@ export const SurfSection: React.FC<SurfSectionProps> = ({ dayData, weather, port
           </div>
 
           <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
-            <span className="text-xs font-bold text-slate-300 font-mono">Viento en la Playa</span>
+            <span className="text-xs font-bold text-slate-300 font-mono">Viento en Costa</span>
             <div className="text-right">
               <span className="text-sm font-bold text-white font-mono">{weather.windSpeedKnots} kts</span>
-              <span className="text-xs text-slate-400 font-mono ml-2">{weather.windDirection}</span>
+              <span className="text-xs text-slate-400 font-mono ml-2">{weather.windDirection} ({weather.windDegrees}°)</span>
             </div>
           </div>
 
-          <div className="pt-2 text-xs space-y-2">
-            {isOffshore ? (
+          <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-1.5">
+            <div className="flex items-center justify-between text-xs font-mono font-bold">
+              <span className="text-slate-300">Clasificación Vectorial:</span>
+              <span className={`px-2 py-0.5 rounded text-[11px] ${
+                windInfo.isOffshore
+                  ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                  : windInfo.isOnshore
+                  ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                  : 'bg-amber-950 text-amber-300 border border-amber-800'
+              }`}>
+                {windInfo.windType} ({windInfo.ratingText})
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed font-sans">
+              {windInfo.description} Dif. angular: {windInfo.angleDiff}° vs orientación playa ({beachAngle}°).
+            </p>
+          </div>
+
+          <div className="pt-1 text-xs space-y-2">
+            {windInfo.isOffshore ? (
               <div className="flex items-center gap-2 text-emerald-400 font-mono bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-800/50">
-                <CheckCircle className="w-4 h-4 shrink-0" /> Viento Offshore ideal (Abre y peina la ola)
+                <CheckCircle className="w-4 h-4 shrink-0" /> Viento Terral (Offshore) ideal: peina y ahueca la pared de la ola.
+              </div>
+            ) : windInfo.isOnshore ? (
+              <div className="flex items-center gap-2 text-rose-400 font-mono bg-rose-950/40 p-2.5 rounded-xl border border-rose-800/50">
+                <AlertTriangle className="w-4 h-4 shrink-0" /> Viento Onshore (Mar de tierra): arruga la ola y chafa la cresta.
               </div>
             ) : (
               <div className="flex items-center gap-2 text-amber-400 font-mono bg-amber-950/40 p-2.5 rounded-xl border border-amber-800/50">
-                <AlertTriangle className="w-4 h-4 shrink-0" /> Viento Onshore (Mar picado o desorganizado)
+                <Info className="w-4 h-4 shrink-0" /> Viento Costero (Sideshore): navegable pero con deriva lateral.
               </div>
             )}
             
             {weather.waveHeightMeters > 3 && (
               <div className="flex items-center gap-2 text-red-400 font-mono bg-red-950/40 p-2.5 rounded-xl border border-red-800/50">
-                <AlertTriangle className="w-4 h-4 shrink-0" /> Alerta: Mar de fuerza elevada (Solo expertos)
+                <AlertTriangle className="w-4 h-4 shrink-0" /> Alerta: Oleaje mayor a 3m (Precaución extrema en el mar).
               </div>
             )}
           </div>
@@ -162,3 +187,4 @@ export const SurfSection: React.FC<SurfSectionProps> = ({ dayData, weather, port
     </div>
   );
 };
+

@@ -69,29 +69,46 @@ export const MonthlyTable: React.FC<MonthlyTableProps> = ({
     r.moonPhaseName.toLowerCase().includes(searchFilter.toLowerCase())
   );
 
-  // CSV Export
+  // CSV Export with UTF-8 BOM for Excel/PowerBI compatibility
   const handleExportCSV = () => {
-    const headers = ['Fecha', 'Día', 'Coeficiente', 'Pleamares', 'Bajamares', 'Fase Lunar', 'Índice Solunar', 'Amanecer', 'Atardecer'];
-    const csvContent = [
+    const headers = [
+      'Puerto',
+      'Fecha',
+      'Día de la Semana',
+      'Coeficiente de Marea',
+      'Pleamares (Hora y Altura)',
+      'Bajamares (Hora y Altura)',
+      'Fase Lunar',
+      'Iluminación Lunar (%)',
+      'Índice Solunar (/5)',
+      'Amanecer',
+      'Atardecer'
+    ];
+
+    const csvLines = [
       headers.join(','),
       ...rows.map(r => [
+        `"${port.name.replace(/"/g, '""')}"`,
         r.dateStr,
         r.dayName,
         r.coefficient,
-        `"${r.highTidesStr}"`,
-        `"${r.lowTidesStr}"`,
-        `"${r.moonPhaseName}"`,
+        `"${r.highTidesStr.replace(/"/g, '""')}"`,
+        `"${r.lowTidesStr.replace(/"/g, '""')}"`,
+        `"${r.moonPhaseName.replace(/"/g, '""')}"`,
+        r.moonIlluminationPct,
         `${r.solunarScore}/5`,
         r.sunrise,
         r.sunset
       ].join(','))
-    ].join('\n');
+    ];
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Prepend UTF-8 BOM (\uFEFF)
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `tabla_mareas_${port.id}_${monthsEs[currentMonth]}_${currentYear}.csv`);
+    link.setAttribute('download', `InfoMarea_Tabla_30dias_${port.id}_${monthsEs[currentMonth]}_${currentYear}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

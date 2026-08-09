@@ -1,10 +1,38 @@
 import { Port, TideDayData, UserUnits } from '../types';
+import { sanitizeString } from './mathHelpers';
 
 /**
- * The "Agent" logic to generate the executive reports based on raw data.
- * This analyzes the data objects and returns structured Spanish text.
+ * The "Agent" logic to generate executive reports and rule-based diagnostic responses.
+ * Enforces API resilience and fallback safety.
  */
+export function ruleBasedAiDiagnostic(port: Port, dayData: TideDayData, units: UserUnits, query: string): string {
+  const cleanQuery = sanitizeString(query.toLowerCase());
+  const coef = dayData.coefficient;
+  const solunar = dayData.solunar;
+  const highs = dayData.highLows.filter(e => e.type === 'pleamar');
+  const lows = dayData.highLows.filter(e => e.type === 'bajamar');
+  const highStr = highs.map(h => `${h.time} (${h.height.toFixed(1)}m)`).join(', ');
+  const lowStr = lows.map(l => `${l.time} (${l.height.toFixed(1)}m)`).join(', ');
+
+  if (cleanQuery.includes('pesca') || cleanQuery.includes('pescar') || cleanQuery.includes('hora')) {
+    const majors = solunar.majorPeriods.map(p => `${p.start}-${p.end}`).join(' y ');
+    return `Diagnóstico para pesca en ${port.name}: Coeficiente de ${coef}. Las mejores horas de picada ocurren durante los repuntes de marea y periodos solunares Mayores (${majors || 'consultar tabla'}). Con pleamares a las ${highStr}, se recomienda pescar 1.5 horas antes y después del llenante.`;
+  }
+
+  if (cleanQuery.includes('navegar') || cleanQuery.includes('viento') || cleanQuery.includes('seguro')) {
+    const isHighCoef = coef >= 85;
+    return `Informe de navegación para ${port.name}: Coeficiente ${coef}. ${isHighCoef ? 'Atención: Mareas vivas extremas con fuertes corrientes en bocana y canales.' : 'Condiciones de mar estables.'} Bajamares previstas a las ${lowStr}.`;
+  }
+
+  if (cleanQuery.includes('origen') || cleanQuery.includes('datos') || cleanQuery.includes('registro')) {
+    return `Origen de datos para ${port.name}: Las mareas son calculadas mediante armónicos astrofísicos M2/S2/N2 calibrados para las coordenadas ${port.lat}°N, ${port.lng}°E. La meteorología y viento se sincronizan con los modelos de Open-Meteo.`;
+  }
+
+  return `Análisis automatizado para ${port.name} (${dayData.dateStr}): Coeficiente ${coef}, actividad solunar ${solunar.activityScore}/100. Pleamares: ${highStr}. Bajamares: ${lowStr}. Fases y alineaciones favorables para actividades marinas.`;
+}
+
 export function generateStationReport(port: Port, dayData: TideDayData, units: UserUnits, query: string) {
+  const sanitizedQuery = sanitizeString(query);
   
   // 1. Executive Summary
   let summary = `Condiciones normales en ${port.name}. `;
@@ -13,6 +41,10 @@ export function generateStationReport(port: Port, dayData: TideDayData, units: U
   
   const bestSolunar = dayData.solunar.activityScore >= 80 ? 'Excelente día para la pesca.' : 'Actividad solunar baja, planifica tus salidas en los repuntes.';
   summary += bestSolunar;
+
+  if (sanitizedQuery) {
+    summary += ` • Consulta personalizada: "${sanitizedQuery}"`;
+  }
 
   // 2. Fishing Diagnosis
   const getFishingDiagnosis = () => {

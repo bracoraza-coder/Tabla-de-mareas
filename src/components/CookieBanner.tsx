@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Cookie, ShieldCheck, Check } from 'lucide-react';
+import { safeGetItem, safeSetItem } from '../utils/storageHelpers';
 
 interface CookieBannerProps {
   onOpenLegal: (tab: 'cookies' | 'privacidad' | 'aviso-legal' | 'terminos-nauticos') => void;
@@ -16,21 +17,21 @@ interface CookieBannerProps {
  * nothing to opt in or out of.
  */
 export const CookieBanner: React.FC<CookieBannerProps> = ({ onOpenLegal }) => {
-  const [showBanner, useState] = React.useState(false);
+  const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
-    const consent = localStorage.getItem('mareas_cookie_consent');
+    const consent = safeGetItem('mareas_cookie_consent');
     if (!consent) {
-      useState(true);
+      setShowBanner(true);
     }
   }, []);
 
   const handleAccept = () => {
-    localStorage.setItem(
+    safeSetItem(
       'mareas_cookie_consent',
       JSON.stringify({ acknowledged: true, timestamp: new Date().toISOString() })
     );
-    useState(false);
+    setShowBanner(false);
   };
 
   if (!showBanner) return null;

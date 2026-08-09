@@ -16,6 +16,7 @@ export const PORTS_DATABASE: Port[] = [
     amplitude: 3.8,
     phaseDelayMinutes: -10,
     isPopular: true,
+    beachAngle: 285, // WNW
   },
   {
     id: 'es-gal-bayona',
@@ -29,6 +30,7 @@ export const PORTS_DATABASE: Port[] = [
     amplitude: 3.7,
     phaseDelayMinutes: -12,
     isPopular: true,
+    beachAngle: 290, // WNW
   },
   {
     id: 'es-gal-cangas',
@@ -3341,4 +3343,17 @@ export function getPortById(id: string): Port {
   const p = PORTS_DATABASE.find(x => x.id === id);
   if (!p) return PORTS_DATABASE[0]; // fallback
   return p;
+}
+
+export function getEffectiveBeachAngle(port: Port): number {
+  if (typeof port.beachAngle === 'number') return port.beachAngle;
+  const reg = (port.region || '').toLowerCase();
+  if (reg.includes('galicia')) return 290; // WNW
+  if (reg.includes('asturias') || reg.includes('cantabria') || reg.includes('país vasco') || reg.includes('pais vasco')) return 0; // North facing
+  if (reg.includes('andalucía') || reg.includes('andalucia')) {
+    return port.lng < -5 ? 225 : 135; // SW or SE
+  }
+  if (reg.includes('cataluña') || reg.includes('valencia') || reg.includes('murcia') || reg.includes('baleares')) return 100; // E/SE
+  if (reg.includes('canarias')) return 90; // East
+  return 270; // West default
 }

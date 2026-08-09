@@ -10,6 +10,16 @@ export interface Port {
   amplitude: number;  // For algorithmic approximation
   phaseDelayMinutes: number; // For algorithmic approximation relative to standard Moon transit
   isPopular: boolean;
+  beachAngle?: number; // Beach facing orientation angle (0° to 360°)
+}
+
+export interface WindClassification {
+  windType: 'Terral (Offshore)' | 'Onshore (Mar de Tierra)' | 'Costero (Sideshore)';
+  ratingText: 'Excelente' | 'Desfavorable' | 'Aceptable';
+  angleDiff: number;
+  isOffshore: boolean;
+  isOnshore: boolean;
+  description: string;
 }
 
 export interface TideEvent {
