@@ -1,9 +1,10 @@
 import React from 'react';
 import { TideDayData, MarineWeather, Port, UserUnits } from '../types';
-import { Waves, Wind, AlertTriangle, CheckCircle, Info, Compass } from 'lucide-react';
+import { Waves, Wind, AlertTriangle, CheckCircle, Info, Compass, Anchor } from 'lucide-react';
 import { SurfDiagram } from './gauges/SurfDiagram';
 import { getEffectiveBeachAngle } from '../data/portsData';
 import { getWindTypeAndRating } from '../utils/mathHelpers';
+import { checkSurfSuitability } from '../utils/surfHelpers';
 
 interface SurfSectionProps {
   dayData: TideDayData;
@@ -19,12 +20,9 @@ export const SurfSection: React.FC<SurfSectionProps> = ({ dayData, weather, port
   const isOffshore = windInfo.isOffshore;
   const isLightWind = weather.windSpeedKnots <= 10;
   
-  const isInland = port.region.toLowerCase().includes('río') || 
-                   port.region.toLowerCase().includes('embalse') || 
-                   port.name.toLowerCase().includes('río ') || 
-                   port.name.toLowerCase().includes('embalse ');
+  const surfSuitability = checkSurfSuitability(port);
 
-  if (isInland) {
+  if (!surfSuitability.isSurfable) {
     return (
       <div className="bg-[#0f172a] rounded-2xl border border-slate-800/50 p-6 shadow-xl relative overflow-hidden mt-8">
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none"></div>
@@ -35,19 +33,27 @@ export const SurfSection: React.FC<SurfSectionProps> = ({ dayData, weather, port
             <h2 className="text-xl font-bold text-white tracking-tight">Reporte de Surf & Pronóstico</h2>
           </div>
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/50 border border-slate-700/50">
-            <span className="text-xs text-slate-400">Spot:</span>
-            <span className="text-sm font-medium text-emerald-400 truncate max-w-[200px]">{port.name}</span>
+            <span className="text-xs text-slate-400">Ubicación:</span>
+            <span className="text-sm font-medium text-amber-400 truncate max-w-[240px]">{port.name}</span>
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center py-12 px-4 bg-slate-900/40 rounded-xl border border-slate-800/60 text-center">
-          <div className="w-16 h-16 bg-slate-800/80 rounded-full flex items-center justify-center mb-4">
-            <Info className="w-8 h-8 text-slate-400" />
+        <div className="flex flex-col items-center justify-center py-12 px-6 bg-slate-900/40 rounded-xl border border-slate-800/60 text-center">
+          <div className="w-16 h-16 bg-slate-800/80 rounded-full flex items-center justify-center mb-4 border border-slate-700/60">
+            {surfSuitability.reason === 'port' ? (
+              <Anchor className="w-8 h-8 text-amber-400" />
+            ) : (
+              <Info className="w-8 h-8 text-cyan-400" />
+            )}
           </div>
-          <h3 className="text-xl font-semibold text-slate-200 mb-2">Ubicación no apta para surf</h3>
-          <p className="text-slate-400 max-w-md text-sm leading-relaxed">
-            Esta ubicación corresponde a aguas interiores (río o embalse) donde no se forman olas aptas para la práctica del surf.
+          <h3 className="text-xl font-bold text-slate-200 mb-2">{surfSuitability.title}</h3>
+          <p className="text-slate-400 max-w-lg text-sm leading-relaxed mb-6 font-sans">
+            {surfSuitability.message}
           </p>
+          <div className="inline-flex items-center gap-2 px-3.5 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs font-mono text-cyan-300">
+            <Compass className="w-4 h-4 text-cyan-400 shrink-0" />
+            <span>Coordenadas exactas: {port.lat.toFixed(4)}°N, {port.lng.toFixed(4)}°W</span>
+          </div>
         </div>
       </div>
     );
