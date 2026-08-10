@@ -12,16 +12,19 @@
               return activeFetch;
             },
             set: function(fn) {
-              activeFetch = fn;
+              if (typeof fn === 'function') {
+                activeFetch = fn;
+              }
             },
             configurable: true,
             enumerable: true
           });
         } catch (e) {
-          // ignore if already configurable
+          // ignore
         }
       })();
     </script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.google.com https://*.doubleclick.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https://ideihm.covam.es https://*.open-meteo.com https://www.google-analytics.com https://*.googlesyndication.com https://*.doubleclick.net; frame-src 'self' https://*.google.com https://googleads.g.doubleclick.net https://*.googlesyndication.com;" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- ===== SEO principal ===== -->

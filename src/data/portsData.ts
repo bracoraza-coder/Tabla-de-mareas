@@ -150,7 +150,7 @@ export const PORTS_DATABASE: Port[] = [
     isPopular: false,
   },
   {
-    id: 'es-gal-camariñas',
+    id: 'es-gal-camarinas',
     name: 'Camariñas (Ría de Camariñas / Cabo Vilán)',
     country: 'España',
     region: 'Galicia',
@@ -1049,7 +1049,7 @@ export const PORTS_DATABASE: Port[] = [
     isPopular: false,
   },
   {
-    id: 'es-val-peñiscola',
+    id: 'es-val-peniscola',
     name: 'Peñíscola (Castillo del Papa Luna)',
     country: 'España',
     region: 'Comunidad Valenciana',
@@ -2461,7 +2461,7 @@ export const PORTS_DATABASE: Port[] = [
     isPopular: true,
   },
   {
-    id: 'es-embalse-valdecañas',
+    id: 'es-embalse-valdecanas',
     name: 'Embalse de Valdecañas (Río Tajo / Cáceres)',
     country: 'España',
     region: 'Extremadura (Ríos y Embalses)',

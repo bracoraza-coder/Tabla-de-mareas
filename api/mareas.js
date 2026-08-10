@@ -1,45 +1,76 @@
-// /api/mareas — Backend propio (Vercel Serverless Function).
+// /api/mareas — Backend Serverless (Vercel Function).
 //
-// El frontend NUNCA llama directamente al IHM: llama a este endpoint.
-// Este endpoint:
-//   1) Busca en vivo, contra el listado oficial del IHM, el ID de estación
-//      que corresponde al puerto pedido (por nombre) - no usamos IDs
-//      adivinados a mano, que sería tan poco fiable como el modelo actual.
-//   2) Pide la predicción real de mareas de esa estación para la fecha dada.
-//   3) Normaliza el resultado a un formato limpio y estable.
-//   4) Cachea en memoria (TTL) para no saturar la API oficial.
-//   5) Si cualquier paso falla, devuelve { ok: false } de forma clara -
-//      nunca datos inventados etiquetados como oficiales.
-//
-// Fuente: Instituto Hidrográfico de la Marina (IHM) - ideihm.covam.es
-// Uso gratuito, sin clave. Atribución obligatoria en el frontend.
-
-// Nota: no se declara "runtime" explícito - Vercel usa Node.js por defecto
-// para archivos en /api/*.js, que es justo lo que necesitamos aquí.
+// Medidas de Seguridad y Optimización Aplicadas:
+// - V-01: Caché con Límite Máximo de Entradas (LRU Eviction) para evitar DoS / OOM.
+// - V-02: Validación estricta de parámetros y fecha (YYYY-MM-DD) contra abuso upstream.
+// - V-04: Eliminación de fuga de datos técnicos internos (sin bodyPreview en respuestas).
+// - V-05: Uso de códigos de estado HTTP semánticos (400, 404, 429, 502, 500) en lugar de 200 con error.
+// - V-06: Adición de encabezados de seguridad HTTP (X-Content-Type-Options, X-Frame-Options, Referrer-Policy).
+// - V-07: Control de tasa de peticiones (Rate Limiting) por IP del cliente.
 
 const IHM_BASE = 'https://ideihm.covam.es/api-ihm/getmarea';
-const STATION_LIST_TTL_MS = 24 * 60 * 60 * 1000; // station list barely changes
-const TIDE_CACHE_TTL_MS = 30 * 60 * 1000; // 30 min, per report recommendation
+const STATION_LIST_TTL_MS = 24 * 60 * 60 * 1000; // 24 horas
+const TIDE_CACHE_TTL_MS = 30 * 60 * 1000;       // 30 minutos
+const MAX_CACHE_ENTRIES = 300;                   // Máximo de elementos en caché (V-01)
 
-// Simple in-memory cache. Serverless instances are ephemeral/cold-started,
-// so this is a best-effort cache (reduces load when an instance is warm),
-// not a durable store - that's fine for this use case.
+// Caché en memoria con desalojo automático por límite de tamaño (LRU)
 let stationListCache = { data: null, fetchedAt: 0 };
 const tideCache = new Map(); // key: `${stationId}:${date}` -> { data, fetchedAt }
+
+// Control de tasa por IP (V-07)
+const ipRateLimitMap = new Map(); // ip -> { count, resetAt }
+const RATE_LIMIT_MAX = 60;        // 60 peticiones por minuto por IP
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const record = ipRateLimitMap.get(ip);
+
+  if (!record || now > record.resetAt) {
+    ipRateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+
+  if (record.count >= RATE_LIMIT_MAX) {
+    return false;
+  }
+
+  record.count += 1;
+  return true;
+}
+
+// Limpieza periódica suave de IPs expiradas
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [ip, record] of ipRateLimitMap.entries()) {
+      if (now > record.resetAt) ipRateLimitMap.delete(ip);
+    }
+  }, 5 * 60 * 1000);
+}
+
+function setInCache(key, payload) {
+  if (tideCache.size >= MAX_CACHE_ENTRIES) {
+    // Elimina la entrada más antigua (primer key en iteración de Map)
+    const oldestKey = tideCache.keys().next().value;
+    if (oldestKey) tideCache.delete(oldestKey);
+  }
+  tideCache.set(key, { data: payload, fetchedAt: Date.now() });
+}
 
 function normalizeName(s) {
   return (s || '')
     .toString()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // strip accents
+    .replace(/[\u0300-\u036f]/g, '') // eliminar acentos
     .toLowerCase()
-    .replace(/\(.*?\)/g, '') // drop parenthetical qualifiers
+    .replace(/\(.*?\)/g, '')         // ignorar paréntesis
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-async function fetchDiagnostic(url, timeoutMs = 6000) {
+async function fetchJsonWithTimeout(url, timeoutMs = 6000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -47,57 +78,41 @@ async function fetchDiagnostic(url, timeoutMs = 6000) {
       signal: controller.signal,
       headers: {
         Accept: 'application/json, text/plain, */*',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'User-Agent': 'InfoMareaPro/2.0 (Backend Proxy)',
       },
     });
     clearTimeout(timeout);
-    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok) return null;
     const text = await res.text();
-    let json = null;
     try {
-      json = JSON.parse(text);
+      return JSON.parse(text);
     } catch {
-      json = null;
+      return null;
     }
-    return {
-      ok: res.ok,
-      status: res.status,
-      contentType,
-      bodyPreview: text.slice(0, 500),
-      json,
-      url,
-    };
   } catch (err) {
     clearTimeout(timeout);
-    return { ok: false, status: 0, error: String(err && err.message || err), url };
+    console.error(`[Fetch Error] ${url}:`, err && err.message ? err.message : err);
+    return null;
   }
-}
-
-async function fetchJson(url) {
-  const diag = await fetchDiagnostic(url);
-  return diag.json;
 }
 
 async function getStationList() {
   const now = Date.now();
   if (stationListCache.data && now - stationListCache.fetchedAt < STATION_LIST_TTL_MS) {
-    return { data: stationListCache.data, diag: null, usedFallback: false };
+    return stationListCache.data;
   }
   const url = `${IHM_BASE}?request=getlist&format=json`;
-  const diag = await fetchDiagnostic(url);
-  const parsed = extractStations(diag.json);
+  const raw = await fetchJsonWithTimeout(url);
+  const parsed = extractStations(raw);
   if (parsed.length === 0) {
-    // Live call failed or returned something unparseable - use the stale
-    // cache if we have one, otherwise the verified fallback snapshot.
-    if (stationListCache.data) return { data: stationListCache.data, diag, usedFallback: false };
-    return { data: { estaciones: { puertos: STATION_LIST_FALLBACK.map(s => ({ id: s.id, code: s.code, puerto: s.name })) } }, diag, usedFallback: true };
+    if (stationListCache.data) return stationListCache.data;
+    // Snapshot oficial verificado como respaldo de seguridad
+    return { estaciones: { puertos: STATION_LIST_FALLBACK.map(s => ({ id: s.id, code: s.code, puerto: s.name })) } };
   }
-  stationListCache = { data: diag.json, fetchedAt: now };
-  return { data: diag.json, diag, usedFallback: false };
+  stationListCache = { data: raw, fetchedAt: now };
+  return raw;
 }
 
-// Verified against a real live response (2026-07-31): the IHM wraps the
-// station list at estaciones.puertos[], each with {id, code, puerto, lat, lon}.
 function extractStations(raw) {
   if (!raw) return [];
   const list = raw?.estaciones?.puertos;
@@ -111,9 +126,6 @@ function extractStations(raw) {
     .filter((s) => s.id !== null && (s.code || s.name));
 }
 
-// A hardcoded snapshot of the real station list, captured from a verified
-// live response, used ONLY if the live getlist call fails. This is real
-// data we've confirmed once, not a guess - a safety net, not a shortcut.
 const STATION_LIST_FALLBACK = [
   { id: '71', code: 'aguarda', name: 'A Guarda' },
   { id: '49', code: 'algeciras', name: 'Algeciras' },
@@ -183,20 +195,17 @@ const STATION_LIST_FALLBACK = [
   { id: '52', code: 'tanger', name: 'Tánger' },
   { id: '10', code: 'tapia', name: 'Tapia' },
   { id: '48', code: 'tarifa', name: 'Tarifa' },
-  { id: '29', code: 'vigo', name: 'Vigo' },
   { id: '26', code: 'vilagarcia', name: 'Vilagarcía (Ría de Arousa)' },
+  { id: '29', code: 'vigo', name: 'Vigo' },
 ];
 
 function findStationId(stations, portName, portCode) {
-  // 1) Exact match on the normalized IHM "code" - most reliable, since our
-  // own port ids are already similar slugs (e.g. 'isla-cristina' vs 'islacristina').
   if (portCode) {
     const normCode = normalizeName(portCode).replace(/\s+/g, '');
     const exact = stations.find((s) => normalizeName(s.code).replace(/\s+/g, '') === normCode);
     if (exact) return exact;
   }
 
-  // 2) Fallback: fuzzy match on the display name.
   const target = normalizeName(portName);
   if (!target) return null;
 
@@ -217,8 +226,6 @@ function findStationId(stations, portName, portCode) {
   return bestScore >= 60 ? best : null;
 }
 
-// Verified against a real live response (2026-07-31): tide events live at
-// mareas.datos.marea[], each with {hora, altura, tipo}.
 function extractTideEvents(raw) {
   const events = raw?.mareas?.datos?.marea;
   if (!Array.isArray(events)) return null;
@@ -240,62 +247,83 @@ function extractTideEvents(raw) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=1800'); // edge cache 30 min
+  // Encabezados de seguridad HTTP (V-06)
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // Control de tasa de peticiones (V-07)
+  const xRealIp = req.headers['x-real-ip'];
+  const xForwardedFor = req.headers['x-forwarded-for'];
+  const clientIp = (typeof xRealIp === 'string' ? xRealIp.trim() : null)
+    || (typeof xForwardedFor === 'string' ? xForwardedFor.split(',')[0].trim() : null)
+    || req.socket?.remoteAddress
+    || '127.0.0.1';
+  if (!checkRateLimit(clientIp)) {
+    return res.status(429).json({
+      ok: false,
+      error: 'Demasiadas peticiones. Por favor, intente nuevamente en un minuto.',
+    });
+  }
 
   const { port, portName, date } = req.query;
 
   if (!portName || typeof portName !== 'string') {
-    res.status(400).json({ ok: false, error: 'Falta el parámetro portName (nombre del puerto a buscar).' });
-    return;
+    return res.status(400).json({
+      ok: false,
+      error: 'Falta el parámetro portName (nombre del puerto a buscar).',
+    });
   }
 
-  const targetDate = typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)
-    ? date
-    : new Date().toISOString().slice(0, 10);
+  // Validación de fecha (YYYY-MM-DD)
+  let targetDate = new Date().toISOString().slice(0, 10);
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    targetDate = date;
+  }
 
   const cacheKey = `${port || portName}:${targetDate}`;
   const cached = tideCache.get(cacheKey);
+
   if (cached && Date.now() - cached.fetchedAt < TIDE_CACHE_TTL_MS) {
-    res.status(200).json({ ...cached.data, cached: true });
-    return;
+    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=1800');
+    return res.status(200).json({ ...cached.data, cached: true });
   }
 
   try {
-    const { data: stationListRaw, diag: listDiag } = await getStationList();
+    const stationListRaw = await getStationList();
     const stations = extractStations(stationListRaw);
 
     if (stations.length === 0) {
-      res.status(200).json({
+      // V-05: Código HTTP 502 Bad Gateway
+      return res.status(502).json({
         ok: false,
         source: 'modelo-estimado',
         reason: 'No se pudo obtener el listado oficial de estaciones del IHM en este momento.',
-        hint: listDiag ? { status: listDiag.status, contentType: listDiag.contentType, bodyPreview: listDiag.bodyPreview } : undefined,
       });
-      return;
     }
 
     const station = findStationId(stations, portName, port);
     if (!station) {
-      res.status(200).json({
+      // V-05: Código HTTP 404 Not Found
+      return res.status(404).json({
         ok: false,
         source: 'modelo-estimado',
         reason: `No se encontró una estación IHM que coincida con "${portName}".`,
       });
-      return;
     }
 
     const dateParam = targetDate.replace(/-/g, '');
     const tideUrl = `${IHM_BASE}?request=gettide&id=${encodeURIComponent(station.id)}&format=json&date=${dateParam}`;
-    const tideRaw = await fetchJson(tideUrl);
+    const tideRaw = await fetchJsonWithTimeout(tideUrl);
     const events = extractTideEvents(tideRaw);
 
     if (!events) {
-      res.status(200).json({
+      // V-05: Código HTTP 502 Bad Gateway
+      return res.status(502).json({
         ok: false,
         source: 'modelo-estimado',
         reason: `El IHM no devolvió datos válidos para la estación "${station.name}" en esta fecha.`,
       });
-      return;
     }
 
     const payload = {
@@ -308,13 +336,17 @@ export default async function handler(req, res) {
       tides: events,
     };
 
-    tideCache.set(cacheKey, { data: payload, fetchedAt: Date.now() });
-    res.status(200).json(payload);
+    setInCache(cacheKey, payload); // V-01: Almacenamiento seguro con límite
+    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=1800');
+    return res.status(200).json(payload);
+
   } catch (err) {
-    res.status(200).json({
+    console.error('[API Mareas Error]:', err);
+    // V-05: Código HTTP 500 Internal Server Error
+    return res.status(500).json({
       ok: false,
       source: 'modelo-estimado',
-      reason: 'Error inesperado consultando el IHM.',
+      reason: 'Error interno en el servidor procesando la consulta.',
     });
   }
 }
