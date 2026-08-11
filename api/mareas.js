@@ -41,12 +41,15 @@ function checkRateLimit(ip) {
 
 // Limpieza periódica suave de IPs expiradas
 if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
+  const timer = setInterval(() => {
     const now = Date.now();
     for (const [ip, record] of ipRateLimitMap.entries()) {
       if (now > record.resetAt) ipRateLimitMap.delete(ip);
     }
   }, 5 * 60 * 1000);
+  if (timer && typeof timer.unref === 'function') {
+    timer.unref();
+  }
 }
 
 function setInCache(key, payload) {
