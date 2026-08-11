@@ -258,7 +258,6 @@ export default async function handler(req, res) {
 
   // Encabezados de seguridad HTTP (V-06)
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
   // Control de tasa de peticiones (V-07)
