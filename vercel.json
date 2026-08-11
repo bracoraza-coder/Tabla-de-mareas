@@ -1,7 +1,14 @@
 {
   "headers": [
     {
-      "source": "/og-image.(jpg|png)",
+      "source": "/og-image.jpg",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Cache-Control", "value": "public, max-age=31536000, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/og-image.png",
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Cache-Control", "value": "public, max-age=31536000, must-revalidate" }
@@ -9,6 +16,6 @@
     }
   ],
   "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/((?!api/.*).*)", "destination": "/index.html" }
   ]
 }

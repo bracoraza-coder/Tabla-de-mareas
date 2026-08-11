@@ -24,6 +24,12 @@ const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 
 function checkRateLimit(ip) {
   const now = Date.now();
+  if (ipRateLimitMap.size > 500) {
+    for (const [key, record] of ipRateLimitMap.entries()) {
+      if (now > record.resetAt) ipRateLimitMap.delete(key);
+    }
+  }
+
   const record = ipRateLimitMap.get(ip);
 
   if (!record || now > record.resetAt) {
@@ -37,19 +43,6 @@ function checkRateLimit(ip) {
 
   record.count += 1;
   return true;
-}
-
-// Limpieza periódica suave de IPs expiradas
-if (typeof setInterval !== 'undefined') {
-  const timer = setInterval(() => {
-    const now = Date.now();
-    for (const [ip, record] of ipRateLimitMap.entries()) {
-      if (now > record.resetAt) ipRateLimitMap.delete(ip);
-    }
-  }, 5 * 60 * 1000);
-  if (timer && typeof timer.unref === 'function') {
-    timer.unref();
-  }
 }
 
 function setInCache(key, payload) {
