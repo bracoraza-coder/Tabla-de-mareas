@@ -1,7 +1,7 @@
 import React from 'react';
-import happySurferImg from '../../assets/images/surfer_happy_riding_1785786807604.jpg';
-import sadSurferImg from '../../assets/images/surfer_sad_flat_1785786819703.jpg';
-import neutralSurferImg from '../../assets/images/surfer_neutral_waiting_1785786830667.jpg';
+import happySurferImg from '../../assets/images/surfer_happy_riding_1785786807604.webp';
+import sadSurferImg from '../../assets/images/surfer_sad_flat_1785786819703.webp';
+import neutralSurferImg from '../../assets/images/surfer_neutral_waiting_1785786830667.webp';
 
 interface SurfDiagramProps {
   rating: number; // 0 to 100
@@ -40,6 +40,8 @@ export const SurfDiagram: React.FC<SurfDiagramProps> = ({ rating, canSurf }) => 
         <img
           src={imageSrc}
           alt={statusText}
+          loading="lazy"
+          decoding="async"
           referrerPolicy="no-referrer"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
         />
