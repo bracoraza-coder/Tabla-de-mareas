@@ -116,7 +116,7 @@ export const ActivityWaveChart: React.FC<ActivityWaveChartProps> = ({
 
       <svg
         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-        className="w-full h-auto min-w-[650px] block font-sans"
+        className="w-full h-auto min-w-[380px] block font-sans"
         preserveAspectRatio="xMidYMid meet"
       >
         <defs>

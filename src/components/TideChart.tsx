@@ -136,8 +136,8 @@ export const TideChart: React.FC<TideChartProps> = ({ data, units, port }) => {
 
       {/* SVG Chart Container */}
       <div className="relative w-full rounded-2xl bg-slate-950 border border-slate-800 shadow-inner overflow-hidden p-1 sm:p-2">
-        <div className="w-full overflow-x-auto overflow-y-hidden touch-pan-x custom-scrollbar">
-          <div className="min-w-[680px] sm:min-w-full h-52 sm:h-72 relative cursor-crosshair group">
+        <div className="w-full overflow-x-auto overflow-y-hidden touch-pan-x custom-scrollbar" style={{WebkitOverflowScrolling:'touch'}}>
+          <div className="min-w-[380px] sm:min-w-full h-44 sm:h-60 md:h-72 relative cursor-crosshair group">
         
         {/* Interaction hint overlay when not hovering */}
         {!hoverData && (

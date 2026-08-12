@@ -63,10 +63,11 @@ export const QuickNav: React.FC<QuickNavProps> = ({ active, onChange }) => {
   return (
     <nav 
       aria-label="Secciones del puerto" 
-      className="bg-slate-950/80 py-1 sm:py-1.5 px-1 sm:px-2 rounded-xl border border-slate-800/80 shadow-inner my-1 transition-all"
+      className="bg-slate-950/80 py-1 sm:py-1.5 px-1 sm:px-2 rounded-xl border border-slate-800/80 shadow-inner my-1 transition-all overflow-x-auto no-scrollbar"
       id="sticky-main-quicknav"
     >
-      <div className="max-w-5xl mx-auto grid grid-cols-6 gap-1 sm:gap-1.5">
+      {/* Grid on sm+, flex-nowrap row on xs to prevent squishing */}
+      <div className="max-w-5xl mx-auto hidden sm:grid sm:grid-cols-6 gap-1 sm:gap-1.5">
         {ITEMS.map(item => {
           const isActive = active === item.id;
           return (
@@ -80,6 +81,25 @@ export const QuickNav: React.FC<QuickNavProps> = ({ active, onChange }) => {
             >
               <span className="shrink-0">{item.icon}</span>
               <span className="truncate">{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
+      {/* Mobile: horizontal scrollable row so labels are never clipped */}
+      <div className="flex sm:hidden flex-row gap-1.5 w-max min-w-full">
+        {ITEMS.map(item => {
+          const isActive = active === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => onChange(item.id)}
+              className={`flex flex-row items-center justify-center gap-1 py-1.5 px-3 rounded-lg border text-[11px] tracking-tight transition-all cursor-pointer font-bold select-none whitespace-nowrap shrink-0 ${
+                isActive ? item.activeClass : item.inactiveClass
+              }`}
+              id={`nav-tab-mobile-${item.id}`}
+            >
+              <span className="shrink-0">{item.icon}</span>
+              <span>{item.label}</span>
             </button>
           );
         })}

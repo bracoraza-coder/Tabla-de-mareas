@@ -269,8 +269,8 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-2 sm:px-3 py-1 sm:py-1.5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-1.5 sm:gap-2.5">
+      <div className="w-full max-w-7xl mx-auto px-2 sm:px-3 py-1 sm:py-1.5 min-w-0">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-1.5 sm:gap-2.5 min-w-0">
           
           {/* Logo & Mobile Quick Action Buttons */}
           <div className="flex items-center justify-between gap-2">
@@ -352,9 +352,9 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Search Bar & Date Selector Row */}
-          <div className="flex flex-row items-center gap-1.5 flex-1">
+          <div className="flex flex-row items-center gap-1.5 flex-1 min-w-0 overflow-hidden">
             {/* Center Search Bar */}
-            <div className="flex-1 relative" ref={searchRef}>
+            <div className="flex-1 relative min-w-0" ref={searchRef}>
               <div className="relative flex items-center">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" />
                 <input
@@ -472,7 +472,7 @@ export const Header: React.FC<HeaderProps> = ({
                       onSelectDate(new Date(e.target.value + 'T12:00:00'));
                     }
                   }}
-                  className="bg-transparent text-xs text-white font-medium focus:outline-none cursor-pointer font-mono w-28 sm:w-auto"
+                  className="bg-transparent text-xs text-white font-medium focus:outline-none cursor-pointer font-mono w-[6.5rem] sm:w-auto"
                   id="date-picker-input"
                 />
                 <button
@@ -648,9 +648,9 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Selected Port Header Pill Bar & Favorites Bar */}
-        <div className="mt-1 pt-1 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-1.5 text-xs">
+        <div className="mt-1 pt-1 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-1.5 text-xs min-w-0 overflow-hidden">
           
-          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 no-scrollbar">
+          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 no-scrollbar min-w-0 max-w-full">
             <span className="text-slate-400 font-bold uppercase text-[10px] whitespace-nowrap flex items-center gap-0.5">
               <MapPin className="w-3 h-3 text-blue-400" /> Puerto:
             </span>

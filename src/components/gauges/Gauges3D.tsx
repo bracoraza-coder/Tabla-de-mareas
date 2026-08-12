@@ -110,7 +110,7 @@ export const Gauges3D: React.FC<Gauges3DProps> = ({ weather, units }) => {
       </div>
 
       {/* Grid of Gauges */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
 
         {/* ================= GAUGE 1: 3D MARITIME BAROMETER ================= */}
         <div className="bg-slate-900/95 border border-slate-800/90 rounded-2xl p-4 flex flex-col items-center justify-between shadow-xl hover:border-slate-700 transition-all relative overflow-hidden group">

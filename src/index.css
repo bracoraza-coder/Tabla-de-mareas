@@ -2,6 +2,37 @@
 
 @variant dark (&:where(.dark, .dark *));
 
+/* ─── Mobile: prevent horizontal scroll on the whole page ─────────────────── */
+html, body {
+  overflow-x: hidden;
+  /* Prevent rubber-band horizontal scrolling on iOS */
+  overscroll-behavior-x: none;
+  /* Honor safe-area insets (iPhone notch / home bar) */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  /* Prevent font-size inflation on iOS after orientation change */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Root layout container: never wider than viewport */
+#root {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Touch improvements: prevent 300ms delay on interactive elements */
+button, a, input, select, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* ─── Scrollable chart wrappers ───────────────────────────────────────────── */
+/* Any element with overflow-x-auto should scroll smoothly on iOS */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+
 /* Theme transitions */
 * {
   transition-property: background-color, border-color, color, fill, stroke;
@@ -29,6 +60,21 @@ svg *, .animate-ping, .animate-pulse, .animate-bounce {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(56, 189, 248, 0.8);
+}
+
+/* Hide scrollbar visually but keep scroll functionality */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── Sticky header bottom padding on mobile ──────────────────────────────── */
+/* Adds bottom padding equal to safe-area-inset-bottom (home bar on iPhones) */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* LIGHT MODE OVERRIDES when html does NOT have class 'dark' */

@@ -357,8 +357,8 @@ export const TideFishChart3D: React.FC<TideFishChart3DProps> = ({ data, units, p
 
       {/* 2. Interactive SVG Chart Container with Mobile Smooth Horizontal Scroll */}
       <div className="relative w-full rounded-2xl bg-slate-950 border border-cyan-900/50 shadow-inner overflow-hidden p-1 sm:p-2">
-        <div className="w-full overflow-x-auto overflow-y-hidden touch-pan-x custom-scrollbar">
-          <div className="min-w-[680px] sm:min-w-full h-80 sm:h-96 relative">
+        <div className="w-full overflow-x-auto overflow-y-hidden touch-pan-x custom-scrollbar" style={{WebkitOverflowScrolling:'touch'}}>
+          <div className="min-w-[480px] sm:min-w-full h-56 sm:h-80 md:h-96 relative">
             <svg
               ref={svgRef}
               viewBox={`0 0 ${chartWidth} ${chartHeight}`}
@@ -850,7 +850,7 @@ export const TideFishChart3D: React.FC<TideFishChart3DProps> = ({ data, units, p
       </div>
 
       {/* 4. Bottom Metrics Panel */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
         
         {/* Card 1: Daily Tide Summary */}
         <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3 space-y-2">

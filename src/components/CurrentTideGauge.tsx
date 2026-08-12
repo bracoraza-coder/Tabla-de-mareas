@@ -81,12 +81,12 @@ export const CurrentTideGauge: React.FC<CurrentTideGaugeProps> = ({
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl relative overflow-hidden">
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-5 shadow-2xl relative overflow-hidden">
       
-      <div className="flex flex-col lg:flex-row gap-6 items-stretch">
+      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 items-stretch">
         
         {/* Real-time Water Height Live Gauge */}
-        <div className="flex-1 bg-slate-950 border border-slate-800 border-l-4 border-l-blue-500 rounded-xl p-5 flex flex-col justify-between relative overflow-hidden">
+        <div className="flex-1 bg-slate-950 border border-slate-800 border-l-4 border-l-blue-500 rounded-xl p-3 sm:p-5 flex flex-col justify-between relative overflow-hidden">
           
           <div className="flex items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2">
@@ -122,7 +122,7 @@ export const CurrentTideGauge: React.FC<CurrentTideGaugeProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center my-2">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-5 items-center my-2">
             
             {/* Height Display */}
             <div className="md:col-span-7 flex flex-col">
