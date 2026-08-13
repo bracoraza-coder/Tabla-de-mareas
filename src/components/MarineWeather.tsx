@@ -16,10 +16,10 @@ import { PressureGauge, CompassRose, DualTempGauge } from './gauges/WeatherGauge
 import { WeatherDetailModal } from './WeatherDetailModal';
 
 // Imported generated professional weather imagery
-import sunnyWeatherImg from '../assets/images/weather_sunny_day_coastal_1785798224299.webp';
-import stormyWeatherImg from '../assets/images/weather_cloudy_stormy_coastal_1785798306933.webp';
+import sunnyWeatherImg from '../assets/images/weather_sunny_day_coastal_1785798224299.jpg';
+import stormyWeatherImg from '../assets/images/weather_cloudy_stormy_coastal_1785798306933.jpg';
 
-import nightWeatherImg from '../assets/images/weather_night_coastal_1785798582753.webp';
+import nightWeatherImg from '../assets/images/weather_night_coastal_1785798582753.jpg';
 
 interface MarineWeatherProps {
   weather: MarineWeatherType;
@@ -98,8 +98,6 @@ export const MarineWeather: React.FC<MarineWeatherProps> = ({
             <img
               src={currentImage}
               alt={weather.condition}
-              loading="lazy"
-              decoding="async"
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover filter contrast-105 brightness-95"
             />

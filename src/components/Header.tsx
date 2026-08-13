@@ -92,16 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const filteredPorts = searchQuery.trim()
     ? searchPorts(PORTS_DATABASE, searchQuery).map(r => r.port)
-    : PORTS_DATABASE.filter(p => p.isPopular || favorites.includes(p.id)).slice(0, 15);
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (filteredPorts.length > 0) {
-      onSelectPort(filteredPorts[0]);
-      setIsSearchOpen(false);
-      setSearchQuery('');
-    }
-  };
+    : PORTS_DATABASE;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -361,10 +352,10 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Search Bar & Date Selector Row */}
-          <div className="flex flex-row items-center gap-1.5 flex-1 min-w-0 z-30">
+          <div className="flex flex-row items-center gap-1.5 flex-1 min-w-0 overflow-hidden">
             {/* Center Search Bar */}
             <div className="flex-1 relative min-w-0" ref={searchRef}>
-              <form onSubmit={handleSearchSubmit} className="relative flex items-center">
+              <div className="relative flex items-center">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" />
                 <input
                   type="text"
@@ -379,7 +370,6 @@ export const Header: React.FC<HeaderProps> = ({
                   id="search-ports-input"
                 />
                 <button
-                  type="button"
                   onClick={handleGPSLocation}
                   disabled={isLocatingGPS}
                   title="Detectar puerto más cercano con GPS"
@@ -393,7 +383,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <Navigation className={`w-2.5 h-2.5 fill-white ${isLocatingGPS ? 'animate-spin' : ''}`} />
                   <span>{isLocatingGPS ? 'Buscando...' : 'GPS'}</span>
                 </button>
-              </form>
+              </div>
 
               {/* GPS Feedback Toast */}
               {gpsFeedback && (
@@ -438,12 +428,6 @@ export const Header: React.FC<HeaderProps> = ({
                       <a
                         key={port.id}
                         href={buildPortPath(port)}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          onSelectPort(port);
-                          setIsSearchOpen(false);
-                          setSearchQuery('');
-                        }}
                         onClick={(e) => {
                           e.preventDefault();
                           onSelectPort(port);

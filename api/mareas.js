@@ -293,11 +293,8 @@ export default async function handler(req, res) {
   const referer = req.headers['referer'] || '';
   const originAllowed = ALLOWED_ORIGINS.has(origin);
 
-  // In development, preview (e.g. Cloud Run, localhost), or from allowed origins, proceed.
-  const isDevOrPreview = !process.env.NODE_ENV || process.env.NODE_ENV !== 'production' || origin.includes('localhost') || origin.includes('run.app') || origin.includes('127.0.0.1');
-  const isAllowedOrigin = originAllowed || isDevOrPreview;
-
-  if (origin && !isAllowedOrigin) {
+  // In development (no origin header) or from allowed origins, proceed.
+  if (origin && !originAllowed) {
     // Also accept requests whose referer starts with an allowed origin
     // (some browsers send referer instead of origin on same-site navigations).
     const refererAllowed = [...ALLOWED_ORIGINS].some(o => referer.startsWith(o));
@@ -306,8 +303,8 @@ export default async function handler(req, res) {
       return;
     }
   }
-  if (originAllowed || isDevOrPreview) {
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  if (originAllowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
   }
 
