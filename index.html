@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="es" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+
+    <!--
+      window.fetch hardening:
+      - configurable: false  → scripts maliciosos no pueden redefinir la propiedad.
+      - writable: false       → asignación directa (window.fetch = x) lanza TypeError en modo estricto.
+      El bloque try/catch silencia el error si el entorno no soporta defineProperty
+      (p.ej. algunos webviews antiguos), degradando con elegancia.
+    -->
+    <script>
+      (function () {
+        try {
+          var _realFetch = window.fetch;
+          if (typeof _realFetch !== 'function') return;
+          Object.defineProperty(window, 'fetch', {
+            value: _realFetch,
+            writable: false,
+            configurable: false,
+            enumerable: true,
+          });
+        } catch (e) {
+          // Entorno no compatible — continuar sin el hardening.
+        }
+      })();
+    </script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+
+    <!-- ===== SEO principal ===== -->
+    <title>InfoMarea Pro | Tabla de Mareas y Previsión de Surf y Olas en Tiempo Real</title>
+    <meta name="description" content="Tabla de mareas y previsión de surf en tiempo real: pleamar, bajamar, coeficiente, altura del agua, mar de fondo (swell), periodo de ola y viento. Puntuación de sesión, tabla recomendada y mejor hora para surfear. Datos gratuitos para más de 100 puertos en infomarea.com." />
+    <meta name="keywords" content="infomarea, tabla de mareas, mareas hoy, pleamar, bajamar, coeficiente de mareas, previsión de surf, previsión de olas, swell, mar de fondo, parte de surf, oleaje, estado del mar, mareas pesca, calendario solunar" />
+    <meta name="author" content="InfoMarea Pro" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="canonical" href="https://infomarea.com/" />
+
+    <!-- ===== Favicons e iconos ===== -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#0284c7" />
+
+    <!-- ===== Leaflet CSS ===== -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+    <!-- ===== Open Graph (Facebook, WhatsApp, Telegram, LinkedIn) ===== -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="InfoMarea Pro" />
+    <meta property="og:title" content="InfoMarea Pro | Tabla de Mareas y Previsión de Surf y Olas en Tiempo Real" />
+    <meta property="og:description" content="Mareas y previsión de surf en tiempo real: swell, periodo de ola, viento y puntuación de sesión. Datos marinos gratuitos y siempre actualizados en infomarea.com." />
+    <meta property="og:url" content="https://infomarea.com/" />
+    <meta property="og:locale" content="es_ES" />
+    <meta property="og:image" content="https://infomarea.com/og-image.jpg?v=3" />
+    <meta property="og:image:secure_url" content="https://infomarea.com/og-image.jpg?v=3" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="InfoMarea Pro - Tabla de Mareas y Previsión de Surf" />
+
+    <!-- ===== Twitter / X Card ===== -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="InfoMarea Pro | Tabla de Mareas y Previsión de Surf y Olas en Tiempo Real" />
+    <meta name="twitter:description" content="Mareas y previsión de surf en tiempo real: swell, periodo de ola, viento y puntuación de sesión, con datos gratuitos y actualizados en infomarea.com." />
+    <meta name="twitter:image" content="https://infomarea.com/og-image.jpg?v=3" />
+    <meta name="twitter:image:alt" content="InfoMarea Pro Banner" />
+
+    <!-- ===== Google tag (gtag.js) ===== -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JM7X5MGNNC"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-JM7X5MGNNC');
+    </script>
+
+    <!-- ===== Google AdSense ===== -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3655950973146688"
+         crossorigin="anonymous"></script>
+
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!--
+      Offline / error fallback:
+      Si el bundle principal no se carga (fallo de red, CDN caído, etc.)
+      se muestra un estado visual mínimo con datos cacheados del último
+      uso, recuperados de localStorage.
+    -->
+    <noscript>
+      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0f172a;color:#94a3b8;font-family:sans-serif;text-align:center;padding:2rem;">
+        <div>
+          <h1 style="color:#38bdf8;margin-bottom:1rem;">InfoMarea Pro</h1>
+          <p>Para usar InfoMarea Pro necesitas activar JavaScript en tu navegador.</p>
+        </div>
+      </div>
+    </noscript>
+
+    <script type="module" src="/src/main.tsx"></script>
+
+    <!--
+      Global error boundary para fallos de red en el bundle principal.
+      Muestra datos cacheados de localStorage si existen, o un mensaje de error.
+    -->
+    <script>
+      window.addEventListener('error', function (e) {
+        // Solo actuar si el root sigue vacío (el bundle no se montó)
+        var root = document.getElementById('root');
+        if (!root || root.children.length > 0) return;
+
+        var lastPort = '';
+        var lastData = null;
+        try {
+          lastPort = localStorage.getItem('infomarea_last_port') || '';
+          var raw    = localStorage.getItem('infomarea_last_tides');
+          if (raw) lastData = JSON.parse(raw);
+        } catch (_) {}
+
+        var msg = lastData
+          ? '<p style="color:#34d399;margin:0.5rem 0">Mostrando los últimos datos guardados para <strong>' + lastPort + '</strong>.</p><p style="font-size:0.8rem;color:#64748b">Comprueba tu conexión y recarga para obtener datos actualizados.</p>'
+          : '<p style="color:#f87171;margin:0.5rem 0">No se pudo cargar la aplicación.</p><p style="font-size:0.8rem;color:#64748b">Comprueba tu conexión a internet y recarga la página.</p>';
+
+        root.innerHTML =
+          '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0f172a;color:#94a3b8;font-family:sans-serif;text-align:center;padding:2rem;">' +
+          '<div><h1 style="color:#38bdf8;margin-bottom:1rem;">InfoMarea Pro</h1>' + msg +
+          '<button onclick="location.reload()" style="margin-top:1.5rem;padding:0.6rem 1.5rem;background:#0284c7;color:#fff;border:none;border-radius:0.5rem;cursor:pointer;font-size:1rem;">Reintentar</button>' +
+          '</div></div>';
+      });
+    </script>
+  </body>
+</html>

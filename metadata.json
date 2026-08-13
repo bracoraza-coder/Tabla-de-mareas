@@ -1,0 +1,6 @@
+{
+  "name": "InfoMarea Pro",
+  "description": "Tabla de mareas y previsión de surf, olas y clima marino en tiempo real.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
